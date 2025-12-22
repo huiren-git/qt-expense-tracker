@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # C++ objects and libs
 *.slo
 *.lo
@@ -52,3 +53,14 @@ compile_commands.json
 *creator.user*
 
 *_qmlcache.qrc
+=======
+build*
+*.user
+*.db
+*.pro.user
+*.exe
+*.obj
+*.o
+*.log
+.DS_Store
+>>>>>>> 20f7ca2 (Initial backend + database manager setup)
