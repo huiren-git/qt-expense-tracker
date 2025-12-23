@@ -81,9 +81,9 @@ void DayDetailWidget::setupHeader()
 
 void DayDetailWidget::setupTable()
 {
-    recordsTable = new QTableWidget(0, 9, this);
+    recordsTable = new QTableWidget(0, 10, this);
     recordsTable->setHorizontalHeaderLabels({
-        "操作", "交易时间", "交易类型", "交易分类",
+        "操作", "交易时间","交易金额", "交易类型", "交易分类",
         "交易方式", "交易对方", "交易内容", "备注", "订单号"
     });
 
@@ -122,9 +122,10 @@ void DayDetailWidget::setupTable()
 
     recordsTable->setColumnWidth(0, 120);  // 操作列
     recordsTable->setColumnWidth(1, 150);  // 交易时间
-    recordsTable->setColumnWidth(2, 80);   // 交易类型
-    recordsTable->setColumnWidth(3, 100);   // 交易分类
-    recordsTable->setColumnWidth(4, 80);    // 交易方式
+    recordsTable->setColumnWidth(2, 100);  // 交易金额
+    recordsTable->setColumnWidth(3, 80);   // 交易类型
+    recordsTable->setColumnWidth(4, 100);   // 交易分类
+    recordsTable->setColumnWidth(5, 80);    // 交易方式
 }
 
 void DayDetailWidget::loadDayData(const QString &date)
@@ -244,14 +245,17 @@ void DayDetailWidget::updateDayData(const QJsonObject &data)
 
         // 其他列
         recordsTable->setItem(row, 1, new QTableWidgetItem(record["transactionDate"].toString()));
-        recordsTable->setItem(row, 2, new QTableWidgetItem(record["transactionType"].toString()));
-        recordsTable->setItem(row, 3, new QTableWidgetItem(record["category"].toString()));
-        recordsTable->setItem(row, 4, new QTableWidgetItem(record["transactionMethod"].toString()));
-        recordsTable->setItem(row, 5, new QTableWidgetItem(record["counterparty"].toString()));
-        recordsTable->setItem(row, 6, new QTableWidgetItem(record["productName"].toString()));
-        recordsTable->setItem(row, 7, new QTableWidgetItem(record["remark"].toString()));
+        double amountValue = record["amount"].toDouble(); // 获取数值
+        QTableWidgetItem *amountItem = new QTableWidgetItem(QString::number(amountValue, 'f', 2)); // 格式化为2位小数的字符串
+        recordsTable->setItem(row, 2, amountItem);
+        recordsTable->setItem(row, 3, new QTableWidgetItem(record["transactionType"].toString()));
+        recordsTable->setItem(row, 4, new QTableWidgetItem(record["category"].toString()));
+        recordsTable->setItem(row, 5, new QTableWidgetItem(record["transactionMethod"].toString()));
+        recordsTable->setItem(row, 6, new QTableWidgetItem(record["counterparty"].toString()));
+        recordsTable->setItem(row, 7, new QTableWidgetItem(record["productName"].toString()));
+        recordsTable->setItem(row, 8, new QTableWidgetItem(record["remark"].toString()));
         QString sourceId = record["sourceId"].isNull() ? "" : record["sourceId"].toString();
-        recordsTable->setItem(row, 8, new QTableWidgetItem(sourceId));
+        recordsTable->setItem(row, 9, new QTableWidgetItem(sourceId));
     }
 }
 
@@ -270,13 +274,14 @@ void DayDetailWidget::onEditClicked(int row)
     // 从表格获取记录数据
     QJsonObject record;
     record["transactionDate"] = recordsTable->item(row, 1)->text();
-    record["transactionType"] = recordsTable->item(row, 2)->text();
-    record["category"] = recordsTable->item(row, 3)->text();
-    record["transactionMethod"] = recordsTable->item(row, 4)->text();
-    record["counterparty"] = recordsTable->item(row, 5)->text();
-    record["productName"] = recordsTable->item(row, 6)->text();
-    record["remark"] = recordsTable->item(row, 7)->text();
-    record["sourceId"] = recordsTable->item(row, 8)->text();
+    record["amount"] = recordsTable->item(row, 2)->text();
+    record["transactionType"] = recordsTable->item(row, 3)->text();
+    record["category"] = recordsTable->item(row, 4)->text();
+    record["transactionMethod"] = recordsTable->item(row, 5)->text();
+    record["counterparty"] = recordsTable->item(row, 6)->text();
+    record["productName"] = recordsTable->item(row, 7)->text();
+    record["remark"] = recordsTable->item(row, 8)->text();
+    record["sourceId"] = recordsTable->item(row, 9)->text();
 
     RecordEditDialog *dialog = new RecordEditDialog(this, true);
     dialog->setRecordData(record);
@@ -293,9 +298,9 @@ void DayDetailWidget::onDeleteClicked(int row)
         QMessageBox::Yes | QMessageBox::No);
 
     if (ret == QMessageBox::Yes) {
-        // TODO: 获取记录ID并发送删除请求
-        // qint64 id = ...;
-        // emit deleteRecordRequested(id);
+        // TODO: 获取交易时间并发送删除请求
+        // qstring date = ...;
+        // emit deleteRecordRequested(date);
     }
 }
 
