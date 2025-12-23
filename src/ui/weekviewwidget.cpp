@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QMessageBox>
 
+
 WeekViewWidget::WeekViewWidget(QWidget *parent)
     : QWidget(parent)
     , currentTransactionType("支出")
@@ -24,15 +25,16 @@ WeekViewWidget::WeekViewWidget(QWidget *parent)
 
 void WeekViewWidget::setupUI()
 {
-    setStyleSheet("QWidget { background-color: #f0f4f8; }");
+    setStyleSheet("QWidget { background-color: #f5f8fb; }");
 
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->setSpacing(20);
-    mainLayout->setContentsMargins(20, 20, 20, 20);
+    mainLayout->setContentsMargins(20, 20, 20, 0);
 
     // 左侧：饼图、排行榜、评论卡片
     QVBoxLayout *leftLayout = new QVBoxLayout();
     leftLayout->setSpacing(15);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
 
     setupPieChart();
     leftLayout->addWidget(pieChartView);
@@ -47,23 +49,30 @@ void WeekViewWidget::setupUI()
 
     // 右侧：时间选择、卡片、柱状图、周历
     QVBoxLayout *rightLayout = new QVBoxLayout();
-    rightLayout->setSpacing(15);
+    rightLayout->setSpacing(10);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
 
     // 创建选择器容器
     QWidget *selectorWidget = new QWidget();
+    selectorWidget->setStyleSheet("QWidget { background-color: transparent; }");  // 透明背景
     QHBoxLayout *selectorLayout = new QHBoxLayout(selectorWidget);
     selectorLayout->setContentsMargins(0, 0, 0, 0);
+    selectorLayout->setSpacing(10);
+    selectorWidget->setFixedHeight(30);  // 固定高度
 
-    prevWeekButton = new QPushButton("←");
-    prevWeekButton->setFixedSize(40, 30);
+    prevWeekButton = new QPushButton("◀");
+    prevWeekButton->setFixedSize(30, 30);
     prevWeekButton->setStyleSheet(
         "QPushButton { "
         "background-color: #3b6ea5; "
         "color: white; "
         "border: none; "
-        "border-radius: 5px; "
+        "border-radius: 15px; "
+        "font-size: 16px; "
+        "font-weight: bold; "
         "}"
         "QPushButton:hover { background-color: #4a7fb8; }"
+        "QPushButton:pressed { background-color: #2d5a8a; }"
     );
     connect(prevWeekButton, &QPushButton::clicked, this, [this]() {
         if (currentWeek > 1) {
@@ -80,16 +89,19 @@ void WeekViewWidget::setupUI()
     weekRangeLabel->setStyleSheet("font-size: 14px; color: #333;");
     updateWeekDisplay();
 
-    nextWeekButton = new QPushButton("→");
-    nextWeekButton->setFixedSize(40, 30);
+    nextWeekButton = new QPushButton("▶");
+    nextWeekButton->setFixedSize(35, 30);
     nextWeekButton->setStyleSheet(
         "QPushButton { "
         "background-color: #3b6ea5; "
         "color: white; "
         "border: none; "
-        "border-radius: 5px; "
+        "border-radius: 15px; "
+        "font-size: 16px; "
+        "font-weight: bold; "
         "}"
         "QPushButton:hover { background-color: #4a7fb8; }"
+        "QPushButton:pressed { background-color: #2d5a8a; }"
     );
     connect(nextWeekButton, &QPushButton::clicked, this, [this]() {
         if (currentWeek < 52) {
@@ -130,16 +142,48 @@ void WeekViewWidget::setupUI()
 void WeekViewWidget::setupPieChart()
 {
     pieChartView = new QChartView();
-    pieChartView->setFixedSize(300, 300);
+    pieChartView->setMinimumSize(300, 300);
+    pieChartView->setMaximumSize(300, 300);
     pieChartView->setRenderHint(QPainter::Antialiasing);
 
-    QPieSeries *series = new QPieSeries();
-    series->setHoleSize(0.35);
+    pieSeries = new QPieSeries();
+    pieSeries->setHoleSize(0.35);
+
+    // 启用鼠标悬浮放大效果
+    connect(pieSeries, &QPieSeries::hovered, this, [this](QPieSlice *slice, bool state) {  // 添加 this 捕获
+        if (slice) {
+            if (state) {
+                // 慢速放大
+                slice->setExploded(true);
+                slice->setExplodeDistanceFactor(0.05);
+
+                // 显示弹窗
+                if (sliceDataMap.contains(slice)) {
+                    QJsonObject data = sliceDataMap[slice];
+                    QString category = data["category"].toString();
+                    double ratio = data["ratio"].toDouble() * 100;
+                    double amount = data["totalAmount"].toDouble();
+
+                    QString tooltip = QString("%1\n占比: %2%\n金额: ￥%3")
+                        .arg(category)
+                        .arg(ratio, 0, 'f', 1)
+                        .arg(amount, 0, 'f', 2);
+
+                    QPoint pos = QCursor::pos();
+                    QToolTip::showText(pos, tooltip, pieChartView, QRect(), 3000);
+                }
+            } else {
+                slice->setExploded(false);
+                QToolTip::hideText();
+            }
+        }
+    });
 
     QChart *chart = new QChart();
-    chart->addSeries(series);
+    chart->addSeries(pieSeries);
     chart->setTitle("分类占比");
-    chart->legend()->setAlignment(Qt::AlignRight);
+    chart->legend()->setVisible(false);
+    //chart->legend()->setAlignment(Qt::AlignRight);
     chart->setBackgroundBrush(QBrush(QColor("#ffffff")));
 
     pieChartView->setChart(chart);
@@ -149,6 +193,8 @@ void WeekViewWidget::setupRankList()
 {
     rankListWidget = new QListWidget();
     rankListWidget->setFixedHeight(200);
+    rankListWidget->setFixedWidth(300);
+    rankListWidget->setSelectionMode(QAbstractItemView::NoSelection);  // 不可选择
     rankListWidget->setStyleSheet(
         "QListWidget { "
         "background-color: white; "
@@ -158,9 +204,19 @@ void WeekViewWidget::setupRankList()
         "QListWidget::item { "
         "padding: 8px; "
         "border-bottom: 1px solid #e0e8f0; "
+        "background-color: transparent; "
         "}"
         "QListWidget::item:hover { "
+        "background-color: transparent; "
+        "QScrollBar:vertical { "
         "background-color: #f0f4f8; "
+        "width: 12px; "
+        "border-radius: 6px; "
+        "}"
+        "QScrollBar::handle:vertical { "
+        "background-color: #c0c8d0; "
+        "border-radius: 6px; "
+        "min-height: 20px; "
         "}"
     );
 }
@@ -186,40 +242,44 @@ void WeekViewWidget::setupCommentCard()
 void WeekViewWidget::setupTransactionTypeCards()
 {
     expenseCard = new QPushButton();
-    expenseCard->setFixedSize(150, 100);
+    expenseCard->setFixedSize(150, 40);
     expenseCard->setCheckable(true);
 
     QVBoxLayout *expenseLayout = new QVBoxLayout(expenseCard);
-    expenseLayout->setContentsMargins(10, 10, 10, 10);
+    expenseLayout->setContentsMargins(0, 0, 0, 0);
+    expenseLayout->setSpacing(3);
+
     QLabel *expenseLabel1 = new QLabel("支出");
-    expenseLabel1->setStyleSheet("font-size: 12px; color: white;");
+    expenseLabel1->setObjectName("titleLabel");
     QLabel *expenseLabel2 = new QLabel("￥0.00");
-    expenseLabel2->setStyleSheet("font-size: 20px; font-weight: bold; color: white;");
-    QLabel *expenseLabel3 = new QLabel("元");
-    expenseLabel3->setStyleSheet("font-size: 12px; color: white;");
+    expenseLabel2->setObjectName("amountLabel");
+    expenseLabel2->setStyleSheet("font-size: 18px; font-weight: bold; background-color: transparent;");
+
     expenseLayout->addWidget(expenseLabel1);
     expenseLayout->addWidget(expenseLabel2);
-    expenseLayout->addWidget(expenseLabel3);
+    expenseLayout->addStretch();
 
     connect(expenseCard, &QPushButton::clicked, this, [this]() {
         switchTransactionType("支出");
     });
 
     incomeCard = new QPushButton();
-    incomeCard->setFixedSize(150, 100);
+    incomeCard->setFixedSize(150, 40);
     incomeCard->setCheckable(true);
 
     QVBoxLayout *incomeLayout = new QVBoxLayout(incomeCard);
-    incomeLayout->setContentsMargins(10, 10, 10, 10);
+    expenseLayout->setContentsMargins(0, 0, 0, 0);
+    incomeLayout->setSpacing(3);
+
     QLabel *incomeLabel1 = new QLabel("收入");
-    incomeLabel1->setStyleSheet("font-size: 12px; color: #666;");
+    incomeLabel1->setObjectName("titleLabel");
     QLabel *incomeLabel2 = new QLabel("￥0.00");
-    incomeLabel2->setStyleSheet("font-size: 20px; font-weight: bold; color: #666;");
-    QLabel *incomeLabel3 = new QLabel("元");
-    incomeLabel3->setStyleSheet("font-size: 12px; color: #666;");
+    incomeLabel2->setObjectName("amountLabel");
+    incomeLabel2->setStyleSheet("font-size: 18px; font-weight: bold; background-color: transparent;");
+
     incomeLayout->addWidget(incomeLabel1);
     incomeLayout->addWidget(incomeLabel2);
-    incomeLayout->addWidget(incomeLabel3);
+    incomeLayout->addStretch();
 
     connect(incomeCard, &QPushButton::clicked, this, [this]() {
         switchTransactionType("收入");
@@ -231,26 +291,36 @@ void WeekViewWidget::switchTransactionType(const QString &type)
     currentTransactionType = type;
 
     QString activeStyle =
-        "QPushButton { "
-        "background-color: #3b6ea5; "
-        "color: white; "
-        "border: none; "
-        "border-radius: 10px; "
-        "text-align: left; "
-        "padding: 10px; "
-        "}"
-        "QLabel { color: white; }";
+            "QPushButton { "
+            "background-color: white; "
+            "border: 2px solid #3b6ea5; "
+            "border-radius: 10px; "
+            "}"
+            "QLabel#titleLabel { "
+            "color: #3b6ea5; "  // 标题文字变蓝
+            "background-color: transparent; "
+            "font-size: 12px; "
+            "}"
+            "QLabel#amountLabel { "
+            "color: #3b6ea5; "  // 金额文字变蓝
+            "background-color: transparent; "
+            "}";
 
     QString inactiveStyle =
-        "QPushButton { "
-        "background-color: #e0e8f0; "
-        "color: #666; "
-        "border: none; "
-        "border-radius: 10px; "
-        "text-align: left; "
-        "padding: 10px; "
-        "}"
-        "QLabel { color: #666; }";
+            "QPushButton { "
+            "background-color: white; "
+            "border: 2px solid #e0e8f0; "
+            "border-radius: 10px; "
+            "}"
+            "QLabel#titleLabel { "
+            "color: #999; "  // 未选中时灰色
+            "background-color: transparent; "
+            "font-size: 12px; "
+            "}"
+            "QLabel#amountLabel { "
+            "color: #999; "  // 未选中时灰色
+            "background-color: transparent; "
+            "}";
 
     if (type == "支出") {
         expenseCard->setStyleSheet(activeStyle);
@@ -342,7 +412,10 @@ void WeekViewWidget::setupWeekCalendar()
         "}"
         "QTableWidget::item:selected { "
         "background-color: #3b6ea5; "
-        "color: white; "
+        "color: #3b6ea5; "
+        "}"
+        "QTableWidget::item:hover { "
+        "background-color: #f5f8fb; "
         "}"
     );
 
@@ -452,17 +525,30 @@ void WeekViewWidget::updateWeekData(const QJsonObject &data)
 
     // 更新饼图
     QJsonArray pieArray = currentWeekObj["pie"].toArray();
-    QChart *chart = pieChartView->chart();
-    QPieSeries *series = qobject_cast<QPieSeries*>(chart->series().first());
-    if (series) {
-        series->clear();
 
-        for (const QJsonValue &value : pieArray) {
-            QJsonObject item = value.toObject();
-            QString category = item["category"].toString();
-            double amount = item["totalAmount"].toDouble();
-            series->append(category, amount);
-        }
+    if (!pieSeries) {
+        return;
+    }
+
+    pieSeries->clear();
+    sliceDataMap.clear();
+
+
+    for (const QJsonValue &value : pieArray) {
+        QJsonObject item = value.toObject();
+        QString category = item["category"].toString();
+        double amount = item["totalAmount"].toDouble();
+        double ratio = item["ratio"].toDouble();
+
+        QPieSlice *slice = pieSeries->append(category, amount);
+        slice->setLabelVisible(false);
+
+        // 存储切片对应的数据，用于弹窗显示
+        QJsonObject sliceData;
+        sliceData["category"] = category;
+        sliceData["totalAmount"] = amount;
+        sliceData["ratio"] = ratio;
+        sliceDataMap[slice] = sliceData;
     }
 
     // 更新排行榜
@@ -528,10 +614,10 @@ void WeekViewWidget::updateWeekData(const QJsonObject &data)
             item->setText(dayText);
             if (day == today) {
                 item->setBackground(QColor("#3b6ea5"));
-                item->setForeground(QColor("white"));
+                //item->setForeground(QColor("white"));
             } else {
-                item->setBackground(QColor("white"));
-                item->setForeground(QColor("black"));
+                item->setBackground(QColor("#333"));
+                //item->setForeground(QColor("black"));
             }
         }
     }
@@ -541,14 +627,10 @@ void WeekViewWidget::updateWeekData(const QJsonObject &data)
         ? currentWeekObj["weeklyExpenseTotal"].toDouble()
         : currentWeekObj["weeklyIncomeTotal"].toDouble();
 
-    QVBoxLayout *cardLayout = qobject_cast<QVBoxLayout*>(
-        (currentTransactionType == "支出") ? expenseCard->layout() : incomeCard->layout()
-    );
-    if (cardLayout) {
-        QLabel *amountLabel = qobject_cast<QLabel*>(cardLayout->itemAt(1)->widget());
-        if (amountLabel) {
-            amountLabel->setText(QString("￥%1").arg(total, 0, 'f', 2));
-        }
+    QPushButton *activeCard = (currentTransactionType == "支出") ? expenseCard : incomeCard;
+    QLabel *amountLabel = activeCard->findChild<QLabel*>("amountLabel");
+    if (amountLabel) {
+        amountLabel->setText(QString("￥%1").arg(total, 0, 'f', 2));
     }
 }
 

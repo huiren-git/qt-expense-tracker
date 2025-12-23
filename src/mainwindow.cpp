@@ -99,7 +99,7 @@ MainWindow::~MainWindow()
 void MainWindow::setupUI()
 {
     setWindowTitle("记账助手");
-    setMinimumSize(1200, 800);
+    setMinimumSize(600, 400);
     setStyleSheet("QMainWindow { background-color: #f0f4f8; }");
 
     QWidget *centralWidget = new QWidget(this);
@@ -121,6 +121,7 @@ void MainWindow::setupUI()
     bodyLayout->addWidget(contentStack, 1);
 
     mainLayout->addLayout(bodyLayout);
+    mainLayout->setStretchFactor(bodyLayout, 1);
 }
 
 void MainWindow::setupTopBar()
@@ -128,7 +129,7 @@ void MainWindow::setupTopBar()
     topBar = new QWidget(this);
     topBar->setFixedHeight(60);
     topBar->setStyleSheet(
-        "QWidget { background-color: #1e3a5f; }"
+        "QWidget { background-color: #6a8fc5; }"
         "QLabel { color: white; font-size: 18px; font-weight: bold; }"
     );
 
@@ -180,16 +181,26 @@ void MainWindow::setupSideBar()
     sideBar = new QWidget(this);
     sideBar->setFixedWidth(150);
     sideBar->setStyleSheet(
-        "QWidget { background-color: #2d4a6b; }"
-        "QPushButton { "
-        "background-color: transparent; "
-        "color: #a0b4c8; "
-        "text-align: left; "
-        "padding: 15px 20px; "
-        "border: none; "
-        "font-size: 16px; "
-        "}"
-        "QPushButton:hover { background-color: #3a5a7f; color: white; }"
+    "QWidget { background-color: #7a9fd5; font-family: 'Microsoft YaHei UI', 'SimHei', 'Arial'; }"
+           "QPushButton { "
+           "background-color: transparent; "
+           "color:  #666; "
+           "text-align: left; "
+           "padding: 15px 20px; "
+           "border: none; "
+           "border-bottom: none; "
+           "font-size: 16px; "
+           "}"
+           "QPushButton:hover { "
+           "background-color: transparent; "
+           "color: #1e3a5f; "
+           "}"
+           "QPushButton:checked { "
+           "background-color: white; "
+           "color: #1e3a5f; "
+           "border-bottom: 3px solid #1e3a5f; "  // 选中时显示下划线
+           "}"
+
     );
 
     QVBoxLayout *sideLayout = new QVBoxLayout(sideBar);

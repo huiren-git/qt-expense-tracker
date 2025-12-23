@@ -19,7 +19,7 @@ MonthViewWidget::MonthViewWidget(QWidget *parent)
 
 void MonthViewWidget::setupUI()
 {
-    setStyleSheet("QWidget { background-color: #f0f4f8; }");
+    setStyleSheet("QWidget { background-color: #f5f8fb; }");
 
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->setSpacing(20);

@@ -16,7 +16,7 @@ DayDetailWidget::DayDetailWidget(QWidget *parent)
 
 void DayDetailWidget::setupUI()
 {
-    setStyleSheet("QWidget { background-color: #f0f4f8; }");
+    setStyleSheet("QWidget { background-color: #f5f8fb; }");
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setSpacing(15);

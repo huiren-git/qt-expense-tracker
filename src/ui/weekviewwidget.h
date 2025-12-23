@@ -20,6 +20,8 @@
 #include <QHeaderView>
 #include <QDate>
 #include <QJsonDocument>
+#include <QPieSlice>
+#include <QToolTip>
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -53,10 +55,13 @@ private:
     void loadTestData();
     void updateWeekData(const QJsonObject &data);
 
+
     // 左侧组件
     QChartView *pieChartView;
     QListWidget *rankListWidget;
     QLabel *commentLabel;
+    QPieSeries *pieSeries;  // 添加饼图系列指针，用于悬浮效果
+    QMap<QPieSlice*, QJsonObject> sliceDataMap;  // 存储切片对应的数据
 
     // 右侧组件
     QPushButton *prevWeekButton;
