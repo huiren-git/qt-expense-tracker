@@ -7,6 +7,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMessageBox>
+#include <QFont>
+
 
 
 WeekViewWidget::WeekViewWidget(QWidget *parent)
@@ -17,6 +19,8 @@ WeekViewWidget::WeekViewWidget(QWidget *parent)
     QDate today = QDate::currentDate();
     currentYear = today.year();
     currentWeek = today.weekNumber();
+    QFont dengXianFont("DengXian");
+    dengXianFont.setPixelSize(12); // 设置字号
 
     setupUI();
     // 加载测试数据
@@ -25,8 +29,9 @@ WeekViewWidget::WeekViewWidget(QWidget *parent)
 
 void WeekViewWidget::setupUI()
 {
-    setStyleSheet("QWidget { background-color: #f5f8fb; }");
 
+    setStyleSheet("QWidget { background-color: #f5f8fb; }");
+    this->setFont(QFont("DengXian", 12));
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->setSpacing(20);
     mainLayout->setContentsMargins(20, 6, 20, 0);
@@ -154,43 +159,54 @@ void WeekViewWidget::setupPieChart()
     pieSeries->setHoleSize(0.35);
 
     // 启用鼠标悬浮放大效果
-    connect(pieSeries, &QPieSeries::hovered, this, [this](QPieSlice *slice, bool state) {  // 添加 this 捕获
-        if (slice) {
-            if (state) {
-                // 慢速放大
-                slice->setExploded(true);
-                slice->setExplodeDistanceFactor(0.05);
+    connect(pieSeries, &QPieSeries::hovered, this, [this](QPieSlice *slice, bool state) {
+            if (!slice) return;
 
-                // 显示弹窗
+            if (state) {
+                // 1. 视觉增强：突出显示
+                slice->setExploded(true);
+                slice->setExplodeDistanceFactor(0.05); // 稍微弹出的距离
+                slice->setPen(QPen(QColor("#3b6ea5"), 2)); // 增加边框颜色
+
+                // 2. 显示精美浮窗 (ToolTip)
                 if (sliceDataMap.contains(slice)) {
                     QJsonObject data = sliceDataMap[slice];
                     QString category = data["category"].toString();
                     double ratio = data["ratio"].toDouble() * 100;
                     double amount = data["totalAmount"].toDouble();
 
-                    QString tooltip = QString("%1\n占比: %2%\n金额: ￥%3")
-                        .arg(category)
-                        .arg(ratio, 0, 'f', 1)
-                        .arg(amount, 0, 'f', 2);
+                    // 使用 HTML 格式美化 ToolTip
+                    QString tooltip = QString(
+                        "<div style='font-family: Microsoft YaHei;'>"
+                        "<b>类别:</b> %1<br/>"
+                        "<b>占比:</b> <span style='color:#3b6ea5;'>%2%</span><br/>"
+                        "<b>金额:</b> ￥%3"
+                        "</div>"
+                    ).arg(category).arg(ratio, 0, 'f', 1).arg(amount, 0, 'f', 2);
 
-                    QPoint pos = QCursor::pos();
-                    QToolTip::showText(pos, tooltip, pieChartView, QRect(), 3000);
+                    // 在鼠标当前位置显示
+                    QToolTip::showText(QCursor::pos(), tooltip, pieChartView);
                 }
             } else {
+                // 还原状态
                 slice->setExploded(false);
+                slice->setPen(QPen(Qt::NoPen)); // 移除边框
                 QToolTip::hideText();
             }
-        }
-    });
+        });
 
-    QChart *chart = new QChart();
-    chart->addSeries(pieSeries);
-    chart->setTitle("分类占比");
-    chart->legend()->setVisible(false);
-    //chart->legend()->setAlignment(Qt::AlignRight);
-    chart->setBackgroundBrush(QBrush(QColor("#ffffff")));
+        // 3. 启用动画（关键：实现“缓慢”感）
+        QChart *chart = new QChart();
+        chart->addSeries(pieSeries);
+        chart->setTitle("分类占比");
 
-    pieChartView->setChart(chart);
+        // 设置动画效果为全部启用
+        chart->setAnimationOptions(QChart::AllAnimations);
+        // 注意：Qt Charts 的动画速度受全局配置影响，AllAnimations 会让 Explode 动作更柔和
+
+        chart->legend()->setVisible(false);
+        chart->setBackgroundBrush(QBrush(QColor("#ffffff")));
+        pieChartView->setChart(chart);
 }
 
 void WeekViewWidget::setupRankList()
@@ -392,6 +408,35 @@ void WeekViewWidget::setupBarChart()
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->setBackgroundBrush(QBrush(QColor("#ffffff")));
 
+    connect(series, &QBarSeries::hovered, this, [this](bool status, int index, QBarSet *barset) {
+            if (status) {
+                // 1. 视觉反馈：加粗边框或改变透明度
+                barset->setPen(QPen(QColor("#1e3a5f"), 2));
+
+                // 2. 获取数据并显示弹窗
+                double value = barset->at(index);
+                QString label = barset->label(); // "本周" 或 "上周"
+                QStringList weekDayNames = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+                QString dayName = (index < 7) ? weekDayNames[index] : "";
+
+                QString tooltip = QString(
+                    "<div style='font-family: Microsoft YaHei;'>"
+                    "<b>%1</b> (%2)<br/>"
+                    "金额: <span style='color:#3b6ea5; font-size:14px;'>￥%3</span>"
+                    "</div>"
+                ).arg(dayName).arg(label).arg(value, 0, 'f', 2);
+
+                QToolTip::showText(QCursor::pos(), tooltip, barChartView);
+            } else {
+                // 还原状态：清除边框
+                barset->setPen(QPen(Qt::NoPen));
+                QToolTip::hideText();
+            }
+        });
+
+        // 必须开启全动画，才能让边框变化显得平滑
+        chart->setAnimationOptions(QChart::AllAnimations);
+
     barChartView->setChart(chart);
 }
 
@@ -449,172 +494,199 @@ void WeekViewWidget::loadWeekData()
 
 void WeekViewWidget::loadTestData()
 {
-    // 创建测试数据
-    QJsonObject testData;
+    QJsonObject response;
+    response["operation"] = true;
     QJsonObject currentWeekObj;
-
     currentWeekObj["year"] = currentYear;
     currentWeekObj["week"] = currentWeek;
-    currentWeekObj["weeklyIncomeTotal"] = 5200.00;
-    currentWeekObj["weeklyExpenseTotal"] = 4100.00;
 
-    // 每日数据
-    QJsonArray dailyBars;
+    // 模拟数据
+    currentWeekObj["weeklyIncomeTotal"] = 5000.0 + (currentWeek * 10);
+    currentWeekObj["weeklyExpenseTotal"] = 3000.0 + (currentWeek * 5);
+
+    QJsonArray currentBars;
+    QJsonArray previousBars;
     for (int i = 0; i < 7; i++) {
-        QJsonObject dayObj;
-        QDate weekStart = QDate::fromString(QString("%1-W%2-1").arg(currentYear).arg(currentWeek, 2, 10, QChar('0')), "yyyy-'W'ww-d");
-        if (!weekStart.isValid()) {
-            weekStart = QDate::currentDate();
-        }
-        QDate day = weekStart.addDays(i);
-        dayObj["date"] = day.toString("yyyy-MM-dd");
-        dayObj["hasRecords"] = (i % 2 == 0);
-        if (currentTransactionType == "支出") {
-            dayObj["dailyAmount"] = (i % 2 == 0) ? (100.0 + i * 50) : 0.0;
-            dayObj["dailyExpense"] = dayObj["dailyAmount"];
-        } else {
-            dayObj["dailyAmount"] = (i % 2 == 0) ? (200.0 + i * 30) : 0.0;
-            dayObj["dailyIncome"] = dayObj["dailyAmount"];
-        }
-        dailyBars.append(dayObj);
-    }
-    currentWeekObj["dailyBars"] = dailyBars;
+        QJsonObject cDay;
+        cDay["dailyExpense"] = 100.0 + (i * 20);
+        cDay["dailyIncome"] = 200.0 + (i * 10);
+        currentBars.append(cDay);
 
-    // 饼图数据
+        QJsonObject pDay;
+        pDay["dailyExpense"] = 90.0 + (i * 15);
+        pDay["dailyIncome"] = 180.0 + (i * 5);
+        previousBars.append(pDay);
+    }
+    currentWeekObj["dailyBars"] = currentBars;
+
+    QJsonObject previousWeekObj;
+    previousWeekObj["dailyBars"] = previousBars;
+
+    // 饼图数据根据类型变化
     QJsonArray pieArray;
+    QJsonObject cat;
     if (currentTransactionType == "支出") {
-        QJsonObject item1;
-        item1["category"] = "餐饮美食";
-        item1["totalAmount"] = 800.00;
-        item1["ratio"] = 0.20;
-        item1["count"] = 5;
-        pieArray.append(item1);
-
-        QJsonObject item2;
-        item2["category"] = "日用百货";
-        item2["totalAmount"] = 600.00;
-        item2["ratio"] = 0.15;
-        item2["count"] = 3;
-        pieArray.append(item2);
-
-        QJsonObject item3;
-        item3["category"] = "服饰装扮";
-        item3["totalAmount"] = 500.00;
-        item3["ratio"] = 0.12;
-        item3["count"] = 2;
-        pieArray.append(item3);
+        cat["category"] = "餐饮美食";
+        cat["totalAmount"] = currentWeekObj["weeklyExpenseTotal"];
     } else {
-        QJsonObject item1;
-        item1["category"] = "收入";
-        item1["totalAmount"] = 5200.00;
-        item1["ratio"] = 1.00;
-        item1["count"] = 2;
-        pieArray.append(item1);
+        cat["category"] = "薪资收入";
+        cat["totalAmount"] = currentWeekObj["weeklyIncomeTotal"];
     }
+    cat["ratio"] = 1.0;
+    pieArray.append(cat);
     currentWeekObj["pie"] = pieArray;
-    currentWeekObj["comment"] = "实用才是第一原则！";
+    currentWeekObj["comment"] = (currentTransactionType == "支出") ? "节约是美德" : "加油赚钱！";
 
-    testData["operation"] = true;
-    testData["currentWeek"] = currentWeekObj;
+    response["currentWeek"] = currentWeekObj;
+    response["previousWeek"] = previousWeekObj;
 
-    updateWeekData(testData);
+    updateWeekData(response);
 }
 
-void WeekViewWidget::updateWeekData(const QJsonObject &data)
+QDate WeekViewWidget::getMondayOfISOWeek(int year, int week)
 {
-    QJsonObject currentWeekObj = data["currentWeek"].toObject();
+    // 1月4日总是落在 ISO 周的第一周
+    QDate day(year, 1, 4);
+    // 找到该周的周一
+    int daysToMonday = day.dayOfWeek() - 1;
+    QDate monday1 = day.addDays(-daysToMonday);
+    // 加上周数差
+    return monday1.addDays((week - 1) * 7);
+}
 
-    // 1. 更新饼图
-    QJsonArray pieArray = currentWeekObj["pie"].toArray();
-    if (!pieSeries) return;
-    pieSeries->clear();
-    sliceDataMap.clear();
 
-    for (const QJsonValue &value : pieArray) {
-        QJsonObject item = value.toObject();
-        QString category = item["category"].toString();
-        double amount = item["totalAmount"].toDouble();
-        double ratio = item["ratio"].toDouble();
-        QPieSlice *slice = pieSeries->append(category, amount);
-        slice->setLabelVisible(false);
+void WeekViewWidget::updateWeekData(const QJsonObject &json)
+{
+    // 1. 协议基础检查
+    if (!json["operation"].toBool()) return;
+    QJsonObject current = json["currentWeek"].toObject();
+    QJsonObject previous = json["previousWeek"].toObject();
 
-        QJsonObject sliceData;
-        sliceData["category"] = category;
-        sliceData["totalAmount"] = amount;
-        sliceData["ratio"] = ratio;
-        sliceDataMap[slice] = sliceData;
+    // --- A. 更新顶部日期和周数文字 ---
+    int year = current["year"].toInt();
+    int week = current["week"].toInt();
+    // 使用 ISO 算法计算日期范围，确保中间文字必变
+    QDate firstDay(year, 1, 4);
+    QDate weekStart = firstDay.addDays(-(firstDay.dayOfWeek() - 1)).addDays((week - 1) * 7);
+    QDate weekEnd = weekStart.addDays(6);
+    weekRangeLabel->setText(QString("%1.%2")
+        .arg(weekStart.toString("yyyy.MM.dd")).arg(weekEnd.toString("yyyy.MM.dd")));
+    weekRangeLabel->setFont(QFont("DengXian", 12, QFont::Bold));
+
+    // --- B. 更新饼图与排行榜 (协议字段: "pie") ---
+    QJsonArray pieArray = current["pie"].toArray();
+    if (pieSeries) {
+        pieSeries->clear();
+        sliceDataMap.clear();
+        rankListWidget->clear(); // 清空旧排行榜
+        int rank = 1;
+
+        for (const QJsonValue &value : pieArray) {
+            QJsonObject item = value.toObject();
+            QString category = item["category"].toString();
+            double amount = item["totalAmount"].toDouble();
+
+            // 更新饼图 Series
+            QPieSlice *slice = pieSeries->append(category, amount);
+            slice->setLabelVisible(false);
+            sliceDataMap[slice] = item; // 存储原始 JSON 对象供 Hover 使用
+
+            // 更新左侧排行榜 (使用等线字体)
+            QString rankText = QString("%1. %2 %3% - ￥%4")
+                .arg(rank++).arg(category)
+                .arg(item["ratio"].toDouble() * 100, 0, 'f', 1)
+                .arg(amount, 0, 'f', 2);
+            QListWidgetItem *rankItem = new QListWidgetItem(rankText);
+            rankItem->setFont(QFont("DengXian", 10));
+            rankListWidget->addItem(rankItem);
+        }
     }
 
-    // 2. 更新排行榜
-    rankListWidget->clear();
-    int rank = 1;
-    for (const QJsonValue &value : pieArray) {
-        QJsonObject item = value.toObject();
-        QString category = item["category"].toString();
-        double amount = item["totalAmount"].toDouble();
-        double ratio = item["ratio"].toDouble();
-        int count = item["count"].toInt();
-        QString text = QString("%1. %2 %3% - ￥%4 (%5笔)")
-            .arg(rank++).arg(category).arg(ratio * 100, 0, 'f', 1)
-            .arg(amount, 0, 'f', 2).arg(count);
-        rankListWidget->addItem(text);
-    }
+    // --- C. 更新柱状图 (协议字段: "dailyBars") ---
+    QJsonArray currentBars = current["dailyBars"].toArray();
+        QJsonArray prevBars = previous["dailyBars"].toArray();
 
-    // 3. 更新评论
-    commentLabel->setText(currentWeekObj["comment"].toString());
+        QChart *barChart = barChartView->chart();
+        barChart->setAnimationOptions(QChart::NoAnimation);
+        barChart->removeAllSeries();
 
-    // 4. 更新柱状图
-    QJsonArray dailyBars = currentWeekObj["dailyBars"].toArray(); // 第一次定义
-    QBarSet *currentSet = new QBarSet("本周");
-    QBarSet *previousSet = new QBarSet("上周");
+        QBarSeries *newBarSeries = new QBarSeries();
+        QBarSet *setThisWeek = new QBarSet("本周" + currentTransactionType);
+        QBarSet *setLastWeek = new QBarSet("上周" + currentTransactionType);
 
-    for (int i = 0; i < dailyBars.size() && i < 7; i++) {
-        double amount = dailyBars[i].toObject()["dailyAmount"].toDouble();
-        *currentSet << amount;
-        *previousSet << (amount * 0.8);
-    }
+        // 颜色统一使用蓝色系
+            setThisWeek->setBrush(QColor("#3b6ea5")); // 深蓝
+            setLastWeek->setBrush(QColor("#a0b8d5")); // 浅蓝
+            setThisWeek->setPen(QPen(Qt::NoPen));
+            setLastWeek->setPen(QPen(Qt::NoPen));
 
-    QChart *barChart = barChartView->chart();
-    barChart->removeAllSeries();
-    QBarSeries *barSeries = new QBarSeries();
-    barSeries->append(currentSet);
-    barSeries->append(previousSet);
-    barChart->addSeries(barSeries);
+        // 根据类型决定读取哪个 JSON 字段
+        QString valKey = (currentTransactionType == "支出") ? "dailyExpense" : "dailyIncome";
 
-    // 5. 更新周历按钮
-    QDate weekStart = QDate::fromString(QString("%1-W%2-1").arg(currentYear).arg(currentWeek, 2, 10, QChar('0')), "yyyy-'W'ww-d");
-    if (!weekStart.isValid()) weekStart = QDate::currentDate();
+        for (int i = 0; i < 7; ++i) {
+            double currentVal = (i < currentBars.size()) ? currentBars[i].toObject()[valKey].toDouble() : 0.0;
+            double previousVal = (i < prevBars.size()) ? prevBars[i].toObject()[valKey].toDouble() : 0.0;
+            *setThisWeek << currentVal;
+            *setLastWeek << previousVal;
+        }
 
+        newBarSeries->append(setLastWeek);
+        newBarSeries->append(setThisWeek);
+        barChart->addSeries(newBarSeries);
+        for (auto axis : barChart->axes()) newBarSeries->attachAxis(axis);
+        // 重新绑定悬浮交互 (支持分辨本周/上周)
+        connect(newBarSeries, &QBarSeries::hovered, this, [this](bool status, int index, QBarSet *barset) {
+            if (status) {
+                QStringList dayNames = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+                QString periodLabel = barset->label(); // "本周" 或 "上周"
+
+                QString tooltip = QString(
+                    "<div style='font-family: DengXian; padding: 5px;'>"
+                    "<b style='color:#333;'>%1 (%2)</b><br/>"
+                    "金额: <span style='color:#3b6ea5; font-weight:bold;'>￥%3</span>"
+                    "</div>"
+                ).arg(dayNames.value(index)).arg(periodLabel).arg(barset->at(index), 0, 'f', 2);
+
+                QToolTip::showText(QCursor::pos(), tooltip, barChartView);
+            } else {
+                QToolTip::hideText();
+            }
+        });
+
+        barChart->setAnimationOptions(QChart::SeriesAnimations);
+
+    // --- D. 更新底部周历按钮 ---
     QStringList weekDayNames = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
-
-    // 注意这里：直接使用上面已经定义好的 dailyBars，不要加 QJsonArray
-    for (int i = 0; i < 7 && i < dailyBars.size(); i++) {
-        QJsonObject dayObj = dailyBars[i].toObject();
-        QDate day = weekStart.addDays(i);
-        double amount = dayObj["dailyAmount"].toDouble();
+    for (int i = 0; i < 7 && i < currentBars.size(); i++) {
+        QJsonObject dayObj = currentBars[i].toObject();
+        QDate dayDate = weekStart.addDays(i);
+        double amount = dayObj[valKey].toDouble(); // 同样根据 key 读取
 
         QString btnText = QString("%1\n%2\n￥%3")
                             .arg(weekDayNames[i])
-                            .arg(day.toString("MM/dd"))
+                            .arg(dayDate.toString("MM/dd"))
                             .arg(amount, 0, 'f', 2);
 
         if (i < dayButtons.size()) {
             dayButtons[i]->setText(btnText);
-            // 只有是今天时才高亮显示
-            dayButtons[i]->setChecked(day == QDate::currentDate());
+            dayButtons[i]->setChecked(dayDate == QDate::currentDate());
+            dayButtons[i]->setFont(QFont("DengXian", 9));
         }
     }
 
-    // 6. 更新卡片总金额
-    double total = (currentTransactionType == "支出")
-        ? currentWeekObj["weeklyExpenseTotal"].toDouble()
-        : currentWeekObj["weeklyIncomeTotal"].toDouble();
+    // --- E. 更新卡片总金额 ---
+    double totalExp = current["weeklyExpenseTotal"].toDouble();
+        double totalInc = current["weeklyIncomeTotal"].toDouble();
 
-    QPushButton *activeCard = (currentTransactionType == "支出") ? expenseCard : incomeCard;
-    QLabel *amountLabel = activeCard->findChild<QLabel*>("amountLabel");
-    if (amountLabel) {
-        amountLabel->setText(QString("￥%1").arg(total, 0, 'f', 2));
-    }
+        QLabel *expLabel = expenseCard->findChild<QLabel*>("amountLabel");
+        if (expLabel) expLabel->setText(QString("￥%1").arg(totalExp, 0, 'f', 2));
+
+        QLabel *incLabel = incomeCard->findChild<QLabel*>("amountLabel");
+        if (incLabel) incLabel->setText(QString("￥%1").arg(totalInc, 0, 'f', 2));
+
+    // --- F. 更新评论 ---
+    commentLabel->setText(current["comment"].toString());
+    commentLabel->setFont(QFont("DengXian", 11));
 }
 
 void WeekViewWidget::onDayClicked(const QString &date)

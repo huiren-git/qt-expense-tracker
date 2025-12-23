@@ -87,6 +87,12 @@ MainWindow::MainWindow(QWidget *parent)
         "padding: 5px; "
         "}"
         "QLineEdit:focus { border-color: #3b6ea5; }"
+
+        // 字体样式
+        "* { "
+           "  font-family: 'DengXian', 'Microsoft YaHei'; " // 优先使用等线，备选微软雅黑
+           "  font-size: 13px; "
+        "} "
     );
 }
 
@@ -122,6 +128,17 @@ void MainWindow::setupUI()
 
     mainLayout->addLayout(bodyLayout);
     mainLayout->setStretchFactor(bodyLayout, 1);
+
+    qApp->setStyleSheet(qApp->styleSheet() +
+        "QToolTip {"
+        "  background-color: rgba(255, 255, 255, 230);" // 半透明白底
+        "  border: 1px solid #3b6ea5;"
+        "  border-radius: 4px;"
+        "  padding: 8px;"
+        "  color: #333;"
+        "  font-size: 12px;"
+        "}"
+    );
 }
 
 void MainWindow::setupTopBar()

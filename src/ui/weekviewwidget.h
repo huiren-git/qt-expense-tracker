@@ -54,6 +54,7 @@ private:
     void loadWeekData();
     void updateWeekDisplay();
     void loadTestData();
+    QDate getMondayOfISOWeek(int, int);
     void updateWeekData(const QJsonObject &data);
 
 
