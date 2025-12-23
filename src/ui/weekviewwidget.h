@@ -49,7 +49,8 @@ private:
     void setupWeekSelector();
     void setupTransactionTypeCards();
     void setupBarChart();
-    void setupWeekCalendar();
+    //void setupWeekCalendar();
+    void setupWeekCalendarButtons();
     void loadWeekData();
     void updateWeekDisplay();
     void loadTestData();
@@ -64,13 +65,19 @@ private:
     QMap<QPieSlice*, QJsonObject> sliceDataMap;  // 存储切片对应的数据
 
     // 右侧组件
+    QWidget *selectorWidget;
     QPushButton *prevWeekButton;
     QPushButton *nextWeekButton;
     QLabel *weekRangeLabel;
     QPushButton *expenseCard;
     QPushButton *incomeCard;
     QChartView *barChartView;
-    QTableWidget *weekCalendarTable;
+
+    //QTableWidget *weekCalendarTable;
+
+    // 日期按钮组相关
+    QHBoxLayout *weekButtonsLayout;
+    QList<QPushButton*> dayButtons;
 
     QString currentTransactionType;
     int currentYear;

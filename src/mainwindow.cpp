@@ -142,15 +142,16 @@ void MainWindow::setupTopBar()
     topLayout->addStretch();
 
     helpButton = new QPushButton("?", topBar);
-    helpButton->setFixedSize(30, 30);
+    helpButton->setFixedSize(35, 35);
     helpButton->setStyleSheet(
         "QPushButton { "
         "background-color: #3b6ea5; "
         "color: white; "
         "border: none; "
         "border-radius: 15px; "
-        "font-size: 16px; "
+        "font-size: 20px; "
         "font-weight: bold; "
+        "padding: 0;"
         "}"
         "QPushButton:hover { background-color: #4a7fb8; }"
         "QPushButton:pressed { background-color: #2d5a8a; }"
@@ -181,14 +182,13 @@ void MainWindow::setupSideBar()
     sideBar = new QWidget(this);
     sideBar->setFixedWidth(150);
     sideBar->setStyleSheet(
-    "QWidget { background-color: #7a9fd5; font-family: 'Microsoft YaHei UI', 'SimHei', 'Arial'; }"
+    "QWidget { background-color: #DAE3F3; font-family: 'Microsoft YaHei UI', 'SimHei', 'Arial'; }"
            "QPushButton { "
            "background-color: transparent; "
            "color:  #666; "
            "text-align: left; "
            "padding: 15px 20px; "
            "border: none; "
-           "border-bottom: none; "
            "font-size: 16px; "
            "}"
            "QPushButton:hover { "
@@ -196,9 +196,7 @@ void MainWindow::setupSideBar()
            "color: #1e3a5f; "
            "}"
            "QPushButton:checked { "
-           "background-color: white; "
-           "color: #1e3a5f; "
-           "border-bottom: 3px solid #1e3a5f; "  // 选中时显示下划线
+           "color: white; "
            "}"
 
     );

@@ -29,7 +29,7 @@ void WeekViewWidget::setupUI()
 
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->setSpacing(20);
-    mainLayout->setContentsMargins(20, 20, 20, 0);
+    mainLayout->setContentsMargins(20, 6, 20, 0);
 
     // 左侧：饼图、排行榜、评论卡片
     QVBoxLayout *leftLayout = new QVBoxLayout();
@@ -56,20 +56,21 @@ void WeekViewWidget::setupUI()
     QWidget *selectorWidget = new QWidget();
     selectorWidget->setStyleSheet("QWidget { background-color: transparent; }");  // 透明背景
     QHBoxLayout *selectorLayout = new QHBoxLayout(selectorWidget);
-    selectorLayout->setContentsMargins(0, 0, 0, 0);
+    selectorLayout->setContentsMargins(0, 5, 0, 5);
     selectorLayout->setSpacing(10);
-    selectorWidget->setFixedHeight(30);  // 固定高度
+    selectorWidget->setFixedHeight(45);  // 固定高度
 
     prevWeekButton = new QPushButton("◀");
-    prevWeekButton->setFixedSize(30, 30);
+    prevWeekButton->setFixedSize(36, 36);
     prevWeekButton->setStyleSheet(
         "QPushButton { "
         "background-color: #3b6ea5; "
         "color: white; "
         "border: none; "
         "border-radius: 15px; "
-        "font-size: 16px; "
+        "font-size: 18px; "
         "font-weight: bold; "
+        "padding: 0;"
         "}"
         "QPushButton:hover { background-color: #4a7fb8; }"
         "QPushButton:pressed { background-color: #2d5a8a; }"
@@ -90,15 +91,16 @@ void WeekViewWidget::setupUI()
     updateWeekDisplay();
 
     nextWeekButton = new QPushButton("▶");
-    nextWeekButton->setFixedSize(35, 30);
+    nextWeekButton->setFixedSize(36, 36);
     nextWeekButton->setStyleSheet(
         "QPushButton { "
         "background-color: #3b6ea5; "
         "color: white; "
         "border: none; "
         "border-radius: 15px; "
-        "font-size: 16px; "
+        "font-size: 18px; "
         "font-weight: bold; "
+        "padding: 0;"
         "}"
         "QPushButton:hover { background-color: #4a7fb8; }"
         "QPushButton:pressed { background-color: #2d5a8a; }"
@@ -123,16 +125,18 @@ void WeekViewWidget::setupUI()
 
     setupTransactionTypeCards();
     QHBoxLayout *cardLayout = new QHBoxLayout();
+    cardLayout->setSpacing(10);
+    cardLayout->setContentsMargins(0, 5, 0, 5);
     cardLayout->addWidget(expenseCard);
     cardLayout->addWidget(incomeCard);
+    cardLayout->addStretch();
     rightLayout->addLayout(cardLayout);
 
     setupBarChart();
-    rightLayout->addWidget(barChartView);
+    rightLayout->addWidget(barChartView,1);
 
-    setupWeekCalendar();
-    rightLayout->addWidget(weekCalendarTable);
-
+    setupWeekCalendarButtons();
+    rightLayout->addLayout(weekButtonsLayout);
     mainLayout->addLayout(rightLayout, 2);
 
     // 默认选中支出
@@ -242,12 +246,12 @@ void WeekViewWidget::setupCommentCard()
 void WeekViewWidget::setupTransactionTypeCards()
 {
     expenseCard = new QPushButton();
-    expenseCard->setFixedSize(150, 40);
+    expenseCard->setFixedSize(160, 60);
     expenseCard->setCheckable(true);
 
     QVBoxLayout *expenseLayout = new QVBoxLayout(expenseCard);
-    expenseLayout->setContentsMargins(0, 0, 0, 0);
-    expenseLayout->setSpacing(3);
+    expenseLayout->setContentsMargins(15, 8, 15, 8);
+    expenseLayout->setSpacing(0);
 
     QLabel *expenseLabel1 = new QLabel("支出");
     expenseLabel1->setObjectName("titleLabel");
@@ -264,12 +268,12 @@ void WeekViewWidget::setupTransactionTypeCards()
     });
 
     incomeCard = new QPushButton();
-    incomeCard->setFixedSize(150, 40);
+    incomeCard->setFixedSize(160, 60);
     incomeCard->setCheckable(true);
 
     QVBoxLayout *incomeLayout = new QVBoxLayout(incomeCard);
-    expenseLayout->setContentsMargins(0, 0, 0, 0);
-    incomeLayout->setSpacing(3);
+    expenseLayout->setContentsMargins(15, 8, 15, 8);
+    incomeLayout->setSpacing(0);
 
     QLabel *incomeLabel1 = new QLabel("收入");
     incomeLabel1->setObjectName("titleLabel");
@@ -356,7 +360,7 @@ void WeekViewWidget::updateWeekDisplay()
 void WeekViewWidget::setupBarChart()
 {
     barChartView = new QChartView();
-    barChartView->setFixedHeight(200);
+    barChartView->setFixedHeight(400);
     barChartView->setRenderHint(QPainter::Antialiasing);
 
     QBarSet *currentSet = new QBarSet("本周");
@@ -391,49 +395,46 @@ void WeekViewWidget::setupBarChart()
     barChartView->setChart(chart);
 }
 
-void WeekViewWidget::setupWeekCalendar()
+void WeekViewWidget::setupWeekCalendarButtons()
 {
-    weekCalendarTable = new QTableWidget(1, 7, this);
-    weekCalendarTable->setFixedHeight(80);
-    weekCalendarTable->horizontalHeader()->setVisible(false);
-    weekCalendarTable->verticalHeader()->setVisible(false);
-    weekCalendarTable->setShowGrid(true);
-    weekCalendarTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    weekButtonsLayout = new QHBoxLayout();
+    weekButtonsLayout->setSpacing(5);
+    weekButtonsLayout->setContentsMargins(0, 5, 0, 5);
 
-    weekCalendarTable->setStyleSheet(
-        "QTableWidget { "
-        "background-color: white; "
-        "border: 1px solid #d0d8e0; "
-        "gridline-color: #e0e8f0; "
-        "}"
-        "QTableWidget::item { "
-        "padding: 5px; "
-        "text-align: center; "
-        "}"
-        "QTableWidget::item:selected { "
-        "background-color: #3b6ea5; "
-        "color: #3b6ea5; "
-        "}"
-        "QTableWidget::item:hover { "
-        "background-color: #f5f8fb; "
-        "}"
-    );
+    QStringList weekDays = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
 
-    QStringList headers = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
-    for (int i = 0; i < 7; i++) {
-        QTableWidgetItem *item = new QTableWidgetItem(headers[i] + "\n￥0.00");
-        item->setTextAlignment(Qt::AlignCenter);
-        weekCalendarTable->setItem(0, i, item);
+    for (int i = 0; i < 7; ++i) {
+        QPushButton *dayBtn = new QPushButton();
+        dayBtn->setCheckable(true);
+        dayBtn->setFixedHeight(60); // 增加高度，使内容更清晰
+        dayBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+        // 样式表：未选中为白底蓝字，选中后为深色背景
+        dayBtn->setStyleSheet(
+            "QPushButton {"
+            "  background-color: white; border: 1px solid #d0d8e0; border-radius: 6px;"
+            "  color: #333; font-size: 12px; text-align: center;"
+            "}"
+            "QPushButton:hover { background-color: #f5f8fb; }"
+            "QPushButton:checked { background-color: #3b6ea5; color: white; border: none; }"
+        );
+
+        // 绑定点击事件
+        connect(dayBtn, &QPushButton::clicked, this, [this, i]() {
+            // 互斥逻辑：点击一个，取消其他
+            for(auto b : dayButtons) b->setChecked(false);
+            dayButtons[i]->setChecked(true);
+
+            // 计算并发送日期
+            QDate weekStart = QDate::fromString(QString("%1-W%2-1").arg(currentYear).arg(currentWeek, 2, 10, QChar('0')), "yyyy-'W'ww-d");
+            if (weekStart.isValid()) {
+                emit dayClicked(weekStart.addDays(i).toString("yyyy-MM-dd"));
+            }
+        });
+
+        weekButtonsLayout->addWidget(dayBtn);
+        dayButtons.append(dayBtn); // 需要在头文件定义 QList<QPushButton*> dayButtons;
     }
-
-    connect(weekCalendarTable, &QTableWidget::cellClicked, this, [this](int row, int col) {
-        QDate weekStart = QDate::fromString(QString("%1-W%2-1").arg(currentYear).arg(currentWeek, 2, 10, QChar('0')), "yyyy-'W'ww-d");
-        if (!weekStart.isValid()) {
-            weekStart = QDate::currentDate();
-        }
-        QDate clickedDate = weekStart.addDays(col);
-        emit dayClicked(clickedDate.toString("yyyy-MM-dd"));
-    });
 }
 
 void WeekViewWidget::loadWeekData()
@@ -523,27 +524,20 @@ void WeekViewWidget::updateWeekData(const QJsonObject &data)
 {
     QJsonObject currentWeekObj = data["currentWeek"].toObject();
 
-    // 更新饼图
+    // 1. 更新饼图
     QJsonArray pieArray = currentWeekObj["pie"].toArray();
-
-    if (!pieSeries) {
-        return;
-    }
-
+    if (!pieSeries) return;
     pieSeries->clear();
     sliceDataMap.clear();
-
 
     for (const QJsonValue &value : pieArray) {
         QJsonObject item = value.toObject();
         QString category = item["category"].toString();
         double amount = item["totalAmount"].toDouble();
         double ratio = item["ratio"].toDouble();
-
         QPieSlice *slice = pieSeries->append(category, amount);
         slice->setLabelVisible(false);
 
-        // 存储切片对应的数据，用于弹窗显示
         QJsonObject sliceData;
         sliceData["category"] = category;
         sliceData["totalAmount"] = amount;
@@ -551,7 +545,7 @@ void WeekViewWidget::updateWeekData(const QJsonObject &data)
         sliceDataMap[slice] = sliceData;
     }
 
-    // 更新排行榜
+    // 2. 更新排行榜
     rankListWidget->clear();
     int rank = 1;
     for (const QJsonValue &value : pieArray) {
@@ -560,30 +554,24 @@ void WeekViewWidget::updateWeekData(const QJsonObject &data)
         double amount = item["totalAmount"].toDouble();
         double ratio = item["ratio"].toDouble();
         int count = item["count"].toInt();
-
         QString text = QString("%1. %2 %3% - ￥%4 (%5笔)")
-            .arg(rank++)
-            .arg(category)
-            .arg(ratio * 100, 0, 'f', 1)
-            .arg(amount, 0, 'f', 2)
-            .arg(count);
+            .arg(rank++).arg(category).arg(ratio * 100, 0, 'f', 1)
+            .arg(amount, 0, 'f', 2).arg(count);
         rankListWidget->addItem(text);
     }
 
-    // 更新评论
-    QString comment = currentWeekObj["comment"].toString();
-    commentLabel->setText(comment);
+    // 3. 更新评论
+    commentLabel->setText(currentWeekObj["comment"].toString());
 
-    // 更新柱状图
-    QJsonArray dailyBars = currentWeekObj["dailyBars"].toArray();
+    // 4. 更新柱状图
+    QJsonArray dailyBars = currentWeekObj["dailyBars"].toArray(); // 第一次定义
     QBarSet *currentSet = new QBarSet("本周");
     QBarSet *previousSet = new QBarSet("上周");
 
     for (int i = 0; i < dailyBars.size() && i < 7; i++) {
-        QJsonObject dayObj = dailyBars[i].toObject();
-        double amount = dayObj["dailyAmount"].toDouble();
+        double amount = dailyBars[i].toObject()["dailyAmount"].toDouble();
         *currentSet << amount;
-        *previousSet << (amount * 0.8); // 模拟上周数据
+        *previousSet << (amount * 0.8);
     }
 
     QChart *barChart = barChartView->chart();
@@ -593,36 +581,31 @@ void WeekViewWidget::updateWeekData(const QJsonObject &data)
     barSeries->append(previousSet);
     barChart->addSeries(barSeries);
 
-    // 更新周历
+    // 5. 更新周历按钮
     QDate weekStart = QDate::fromString(QString("%1-W%2-1").arg(currentYear).arg(currentWeek, 2, 10, QChar('0')), "yyyy-'W'ww-d");
-    if (!weekStart.isValid()) {
-        weekStart = QDate::currentDate();
-    }
-    QDate today = QDate::currentDate();
+    if (!weekStart.isValid()) weekStart = QDate::currentDate();
 
+    QStringList weekDayNames = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+
+    // 注意这里：直接使用上面已经定义好的 dailyBars，不要加 QJsonArray
     for (int i = 0; i < 7 && i < dailyBars.size(); i++) {
         QJsonObject dayObj = dailyBars[i].toObject();
         QDate day = weekStart.addDays(i);
         double amount = dayObj["dailyAmount"].toDouble();
 
-        QString dayText = QString("%1\n￥%2")
-            .arg(day.toString("MM/dd"))
-            .arg(amount, 0, 'f', 2);
+        QString btnText = QString("%1\n%2\n￥%3")
+                            .arg(weekDayNames[i])
+                            .arg(day.toString("MM/dd"))
+                            .arg(amount, 0, 'f', 2);
 
-        QTableWidgetItem *item = weekCalendarTable->item(0, i);
-        if (item) {
-            item->setText(dayText);
-            if (day == today) {
-                item->setBackground(QColor("#3b6ea5"));
-                //item->setForeground(QColor("white"));
-            } else {
-                item->setBackground(QColor("#333"));
-                //item->setForeground(QColor("black"));
-            }
+        if (i < dayButtons.size()) {
+            dayButtons[i]->setText(btnText);
+            // 只有是今天时才高亮显示
+            dayButtons[i]->setChecked(day == QDate::currentDate());
         }
     }
 
-    // 更新卡片金额
+    // 6. 更新卡片总金额
     double total = (currentTransactionType == "支出")
         ? currentWeekObj["weeklyExpenseTotal"].toDouble()
         : currentWeekObj["weeklyIncomeTotal"].toDouble();
