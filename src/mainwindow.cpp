@@ -30,7 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     db.openDatabase();
     db.createTables();
-<<<<<<< HEAD
+
     db.insertDefaultTables();
 
     // 检查数据库是否为空，决定显示空状态还是默认视图
@@ -88,7 +88,6 @@ MainWindow::MainWindow(QWidget *parent)
         "}"
         "QLineEdit:focus { border-color: #3b6ea5; }"
     );
->>>>>>> f1f59dd4a4eed5440570ed4dc6396d18fe9e15bc
 }
 
 MainWindow::~MainWindow()
