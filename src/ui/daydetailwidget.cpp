@@ -87,6 +87,13 @@ void DayDetailWidget::setupTable()
         "交易方式", "交易对方", "交易内容", "备注", "订单号"
     });
 
+    recordsTable->verticalHeader()->setVisible(false);
+    // 增加行高：从默认的约 30 增加到 45 或 50
+    recordsTable->verticalHeader()->setDefaultSectionSize(48);
+    // 确保内容垂直居中
+    recordsTable->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    //顺便微调表头高度，使其更协调
+    recordsTable->horizontalHeader()->setFixedHeight(45);
     recordsTable->horizontalHeader()->setStretchLastSection(true);
     recordsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     recordsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -104,6 +111,13 @@ void DayDetailWidget::setupTable()
         "background-color: #3b6ea5; "
         "color: white; "
         "}"
+        "QHeaderView::section { "
+                "    background-color: #1e3a5f; " // 深蓝色背景
+                "    color: white; "              // 白色文字
+                "    padding: 4px; "
+                "    border: 1px solid #ffffff; " // 表头单元格之间的白色边框
+                "    font-weight: bold; "
+                "}"
     );
 
     recordsTable->setColumnWidth(0, 120);  // 操作列
@@ -187,11 +201,11 @@ void DayDetailWidget::updateDayData(const QJsonObject &data)
         // 操作列：删除和编辑按钮
         QWidget *actionWidget = new QWidget();
         QHBoxLayout *actionLayout = new QHBoxLayout(actionWidget);
-        actionLayout->setContentsMargins(5, 2, 5, 2);
-        actionLayout->setSpacing(5);
+        actionLayout->setContentsMargins(2, 2, 5, 2);
+        actionLayout->setSpacing(4);
 
         QPushButton *deleteBtn = new QPushButton("删除");
-        deleteBtn->setFixedSize(50, 25);
+        deleteBtn->setFixedSize(45, 24);
         deleteBtn->setStyleSheet(
             "QPushButton { "
             "background-color: #e74c3c; "
@@ -199,6 +213,7 @@ void DayDetailWidget::updateDayData(const QJsonObject &data)
             "border: none; "
             "border-radius: 3px; "
             "font-size: 12px; "
+            "padding: 0px; "
             "}"
             "QPushButton:hover { background-color: #c0392b; }"
         );
@@ -207,7 +222,7 @@ void DayDetailWidget::updateDayData(const QJsonObject &data)
         });
 
         QPushButton *editBtn = new QPushButton("编辑");
-        editBtn->setFixedSize(50, 25);
+        editBtn->setFixedSize(45, 24);
         editBtn->setStyleSheet(
             "QPushButton { "
             "background-color: #3b6ea5; "
@@ -215,6 +230,7 @@ void DayDetailWidget::updateDayData(const QJsonObject &data)
             "border: none; "
             "border-radius: 3px; "
             "font-size: 12px; "
+            "padding: 0px; "
             "}"
             "QPushButton:hover { background-color: #4a7fb8; }"
         );

@@ -281,13 +281,11 @@ void MainWindow::setupContentArea()
     yearViewWidget = new YearViewWidget();
     dayDetailWidget = new DayDetailWidget();
 
-    connect(dayDetailWidget, SIGNAL(backToMainView()), this, SLOT(onBackFromDetail()));
+    connect(weekViewWidget, &WeekViewWidget::dayClicked, this, &MainWindow::showDayDetailView);
+    connect(monthViewWidget, &MonthViewWidget::dayClicked, this, &MainWindow::showDayDetailView);
 
-       // 连接周度视图的日期点击信号
-    connect(weekViewWidget, SIGNAL(dayClicked(QString)), this, SLOT(showDayDetailView(QString)));
-
-       // 连接月度视图的日期点击信号
-    connect(monthViewWidget, SIGNAL(dayClicked(QString)), this, SLOT(showDayDetailView(QString)));
+    // 返回按钮同理
+    connect(dayDetailWidget, &DayDetailWidget::backToMainView, this, &MainWindow::onBackFromDetail);
 
     contentStack->addWidget(emptyStateWidget);
     contentStack->addWidget(weekViewWidget);

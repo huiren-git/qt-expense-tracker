@@ -19,6 +19,21 @@ public:
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override {
+
+        if (index.row() == 0) {
+            painter->save();
+                    // 绘制深蓝背景
+                    painter->fillRect(option.rect, QColor("#1e3a5f"));
+                    // 绘制白色文字
+                    painter->setPen(Qt::white);
+                    painter->setFont(QFont("DengXian", 11, QFont::Bold));
+
+                    // 获取系统默认的星期名称（Sun, Mon...）
+                    QString text = index.data(Qt::DisplayRole).toString();
+                    painter->drawText(option.rect, Qt::AlignCenter, text);
+                    painter->restore();
+                    return;
+            }
         // 1. 获取日期
         QDate date = index.data(Qt::UserRole).toDate();
         if (!date.isValid()) {
@@ -249,8 +264,8 @@ void MonthViewWidget::setupCalendar()
             "   outline: none; "
             "}"
             "QCalendarWidget QHeaderView::section { "
-            "   background-color: #e6f0ff; "      /* 表头浅蓝 */
-            "   color: #3b6ea5; "
+            "   background-color: #1e3a5f; "      /* 表头浅蓝 */
+            "   color: white; "
             "   height: 45px; "
             "   font-weight: bold; "
             "   font-size: 16px; "
@@ -363,14 +378,47 @@ void MonthViewWidget::setupRankList() {
     rankListWidget = new QListWidget();
     rankListWidget->setFixedHeight(200);
     rankListWidget->setFixedWidth(300);
-    rankListWidget->setStyleSheet("QListWidget { background: white; border: 1px solid #d0d8e0; border-radius: 5px; }");
+    rankListWidget->setSelectionMode(QAbstractItemView::NoSelection);
+    rankListWidget->setStyleSheet(
+        "QListWidget { "
+        "background-color: white; "
+        "border: 1px solid #d0d8e0; "
+        "border-radius: 5px; "
+        "}"
+        "QListWidget::item { "
+        "padding: 8px; "
+        "border-bottom: 1px solid #e0e8f0; "
+        "background-color: transparent; "
+        "}"
+        "QListWidget::item:hover { "
+        "background-color: transparent; "
+        "QScrollBar:vertical { "
+        "background-color: #f0f4f8; "
+        "width: 12px; "
+        "border-radius: 6px; "
+        "}"
+        "QScrollBar::handle:vertical { "
+        "background-color: #c0c8d0; "
+        "border-radius: 6px; "
+        "min-height: 20px; "
+        "}"
+    );
 }
 
 void MonthViewWidget::setupCommentCard() {
     commentLabel = new QLabel();
     commentLabel->setFixedHeight(80);
     commentLabel->setFixedWidth(300);
-    commentLabel->setStyleSheet("QLabel { background: white; border: 2px dashed #3b6ea5; border-radius: 10px; padding: 10px; }");
+    commentLabel->setStyleSheet(
+        "QLabel { "
+        "background-color: white; "
+        "border: 2px dashed #3b6ea5; "
+        "border-radius: 10px; "
+        "padding: 15px; "
+        "font-size: 14px; "
+        "color: #333; "
+        "}"
+    );
     commentLabel->setWordWrap(true);
     commentLabel->setAlignment(Qt::AlignCenter);
 }
@@ -381,14 +429,26 @@ void MonthViewWidget::setupMonthSelector() {
 
         // 极致简洁的下拉框样式
         QString minimalistCombo =
-            "QComboBox { "
-            "   border: none; border-bottom: 2px solid #d0d8e0; background: transparent; "
-            "   padding: 2px 10px; min-width: 80px; font-weight: bold; color: #3b6ea5; "
-            "}"
-            "QComboBox:hover { border-bottom: 2px solid #3b6ea5; }"
-            "QComboBox::drop-down { border: none; width: 20px; }"
-            "QComboBox::down-arrow { image: none; border-left: 4px solid transparent; "
-            "border-right: 4px solid transparent; border-top: 5px solid #3b6ea5; }";
+                "QComboBox { "
+                "   border: 1px solid #d0d8e0; "           // 改为全边框
+                "   border-radius: 4px; "                  // 增加轻微圆角
+                "   background: white; "                   // 背景改为白色
+                "   padding: 4px 10px; "                   // 增加上下内边距
+                "   min-width: 90px; "
+                "   font-weight: bold; "
+                "   color: #3b6ea5; "
+                "}"
+                "QComboBox:hover { border-color: #3b6ea5; }" // 悬浮时边框变深
+                "QComboBox::drop-down { border: none; width: 25px; }"
+                "QComboBox::down-arrow { image: none; border-left: 5px solid transparent; "
+                "border-right: 5px solid transparent; border-top: 6px solid #3b6ea5; } "
+                // 下拉列表视图的样式
+                "QComboBox QAbstractItemView { "
+                "   background-color: white; "
+                "   selection-background-color: #e6f0ff; "
+                "   selection-color: #3b6ea5; "
+                "   border: 1px solid #d0d8e0; "
+                "}";
 
         yearComboBox = new QComboBox();
         monthComboBox = new QComboBox();

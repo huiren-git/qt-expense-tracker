@@ -34,6 +34,7 @@ private slots:
     void onMonthViewClicked();
     void onYearViewClicked();
     void onBackFromDetail();
+    void showDayDetailView(const QString &date);
 
 private:
     void setupUI();
@@ -44,7 +45,6 @@ private:
     void showWeekView();
     void showMonthView();
     void showYearView();
-    void showDayDetailView(const QString &date);
 
     Ui::MainWindow *ui;
 
@@ -63,10 +63,10 @@ private:
     // 主内容区
     QStackedWidget *contentStack;
     QWidget *emptyStateWidget;      // 空状态页面
-    QWidget *weekViewWidget;        // 周度视图
-    QWidget *monthViewWidget;       // 月度视图
-    QWidget *yearViewWidget;        // 年度视图
-    DayDetailWidget *dayDetailWidget;        // 单日详情视图
+    WeekViewWidget *weekViewWidget;        // 周度视图
+    MonthViewWidget *monthViewWidget;      // 月度视图
+    YearViewWidget *yearViewWidget;        // 年度视图
+    DayDetailWidget *dayDetailWidget;
 
     // 当前选中的视图类型
     QString currentViewType;        // "week", "month", "year"

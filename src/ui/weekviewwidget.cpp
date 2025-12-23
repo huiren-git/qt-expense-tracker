@@ -214,7 +214,7 @@ void WeekViewWidget::setupRankList()
     rankListWidget = new QListWidget();
     rankListWidget->setFixedHeight(200);
     rankListWidget->setFixedWidth(300);
-    rankListWidget->setSelectionMode(QAbstractItemView::NoSelection);  // 不可选择
+    rankListWidget->setSelectionMode(QAbstractItemView::NoSelection); 
     rankListWidget->setStyleSheet(
         "QListWidget { "
         "background-color: white; "
@@ -451,10 +451,9 @@ void WeekViewWidget::setupWeekCalendarButtons()
     for (int i = 0; i < 7; ++i) {
         QPushButton *dayBtn = new QPushButton();
         dayBtn->setCheckable(true);
-        dayBtn->setFixedHeight(60); // 增加高度，使内容更清晰
+        dayBtn->setFixedHeight(60);
         dayBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-        // 样式表：未选中为白底蓝字，选中后为深色背景
         dayBtn->setStyleSheet(
             "QPushButton {"
             "  background-color: white; border: 1px solid #d0d8e0; border-radius: 6px;"
@@ -464,21 +463,20 @@ void WeekViewWidget::setupWeekCalendarButtons()
             "QPushButton:checked { background-color: #3b6ea5; color: white; border: none; }"
         );
 
-        // 绑定点击事件
+        // 绑定点击事件 - 修复：使用正确的 ISO 周计算方式
         connect(dayBtn, &QPushButton::clicked, this, [this, i]() {
             // 互斥逻辑：点击一个，取消其他
             for(auto b : dayButtons) b->setChecked(false);
             dayButtons[i]->setChecked(true);
 
-            // 计算并发送日期
-            QDate weekStart = QDate::fromString(QString("%1-W%2-1").arg(currentYear).arg(currentWeek, 2, 10, QChar('0')), "yyyy-'W'ww-d");
-            if (weekStart.isValid()) {
-                emit dayClicked(weekStart.addDays(i).toString("yyyy-MM-dd"));
-            }
+            // 计算并发送日期 - 使用 getMondayOfISOWeek 函数
+            QDate weekStart = getMondayOfISOWeek(currentYear, currentWeek);
+            QString dateStr = weekStart.addDays(i).toString("yyyy-MM-dd");
+            emit dayClicked(dateStr);
         });
 
         weekButtonsLayout->addWidget(dayBtn);
-        dayButtons.append(dayBtn); // 需要在头文件定义 QList<QPushButton*> dayButtons;
+        dayButtons.append(dayBtn);
     }
 }
 

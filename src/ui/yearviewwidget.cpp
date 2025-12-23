@@ -264,7 +264,7 @@ void YearViewWidget::switchTransactionType(const QString &type)
 void YearViewWidget::setupBarChart()
 {
     barChartView = new QChartView();
-    barChartView->setFixedHeight(420);
+    barChartView->setFixedHeight(440);
     barChartView->setRenderHint(QPainter::Antialiasing);
 
     QChart *chart = new QChart();
@@ -272,45 +272,70 @@ void YearViewWidget::setupBarChart()
     chart->setBackgroundBrush(QBrush(QColor("#ffffff")));
     chart->setAnimationOptions(QChart::SeriesAnimations);
 
+    // X 轴：12 个月
     QStringList months;
-    for (int i = 1; i <= 12; ++i) months << QString("%1月").arg(i);
+    for (int i = 1; i <= 12; ++i)
+        months << QString("%1月").arg(i);
+
     auto *axisX = new QBarCategoryAxis();
     axisX->append(months);
     chart->addAxis(axisX, Qt::AlignBottom);
 
+    // Y 轴
     auto *axisY = new QValueAxis();
-    axisY->setLabelFormat("%.0f"); // 格式化
+    axisY->setLabelFormat("%.0f");
     chart->addAxis(axisY, Qt::AlignLeft);
 
+    // 只有一组柱子：本年
     barSeries = new QBarSeries();
-        barSet = new QBarSet("金额");
-        barSet->setBrush(QColor("#3b6ea5"));
-        barSet->setPen(QPen(Qt::NoPen));
+    barSet = new QBarSet("本年");          // label 用在 tooltip 中
+    barSet->setBrush(QColor("#3b6ea5"));
+    barSet->setPen(QPen(Qt::NoPen));
 
-        // 初始化 12 个 0
-        for(int i=0; i<12; ++i) *barSet << 0;
+    // 初始化 12 个 0
+    for (int i = 0; i < 12; ++i)
+        *barSet << 0;
 
-        barSeries->append(barSet);
-        chart->addSeries(barSeries);
-        barSeries->attachAxis(axisX);
-        barSeries->attachAxis(axisY);
+    barSeries->append(barSet);
+    chart->addSeries(barSeries);
+    barSeries->attachAxis(axisX);
+    barSeries->attachAxis(axisY);
 
-        // 绑定一次即可
-        connect(barSeries, &QBarSeries::hovered, this, [this](bool status, int index, QBarSet *set) {
-            if (status && index >= 0) {
-                set->setPen(QPen(QColor("#1e3a5f"), 2));
-                QString tooltip = QString("<b>%1月</b><br/>金额: ￥%2")
-                                  .arg(index + 1).arg(set->at(index), 0, 'f', 2);
-                QToolTip::showText(QCursor::pos(), tooltip, barChartView);
-            } else {
-                set->setPen(QPen(Qt::NoPen));
-                QToolTip::hideText();
-            }
-        });
+    // 悬停提示
+    connect(barSeries, &QBarSeries::hovered, this,
+            [this](bool status, int index, QBarSet *set) {
+        if (status && index >= 0 && index < set->count()) {
+            // 1. 视觉反馈：高亮边框
+            set->setPen(QPen(QColor("#1e3a5f"), 2));
 
-        chart->legend()->setVisible(true);
-        chart->legend()->setAlignment(Qt::AlignBottom);
-        barChartView->setChart(chart);
+            // 2. tooltip 内容
+            int month = index + 1;
+            double value = set->at(index);
+
+            QString tooltip = QString(
+                "<div style='font-family: Microsoft YaHei;'>"
+                "<b>%1月</b> (%2)<br/>"
+                "金额: <span style='color:#3b6ea5; font-size:14px;'>￥%3</span>"
+                "</div>"
+            ).arg(month)
+             .arg(set->label())                 // "本年"
+             .arg(value, 0, 'f', 2);
+
+            QToolTip::showText(QCursor::pos(), tooltip, barChartView);
+        } else {
+            // 还原状态
+            set->setPen(QPen(Qt::NoPen));
+            QToolTip::hideText();
+        }
+    });
+
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+
+    // 为了让柱子 hover 边框变化更平滑
+    chart->setAnimationOptions(QChart::AllAnimations);
+
+    barChartView->setChart(chart);
 }
 
 void YearViewWidget::onYearChanged(int year)
@@ -409,6 +434,7 @@ void YearViewWidget::updateYearData(const QJsonObject &json)
 
     QBarSeries *newSeries = new QBarSeries();
     QBarSet *barSet = new QBarSet(currentTransactionType == "支出" ? "月支出" : "月收入");
+
     if (barSet) {
         barSet->setLabel(currentTransactionType == "支出" ? "月支出" : "月收入");
         barSet->remove(0, barSet->count()); // 清空
@@ -437,16 +463,21 @@ void YearViewWidget::updateYearData(const QJsonObject &json)
     newSeries->attachAxis(barChart->axes(Qt::Vertical).first());
 
     connect(newSeries, &QBarSeries::hovered, this, [this](bool status, int index, QBarSet *barset) {
-        if (status) {
-            barset->setPen(QPen(QColor("#1e3a5f"), 2));
+        if (status && index >= 0) {
+            // 1. 视觉反馈：显示 Tooltip
             QString tooltip = QString(
                 "<div style='font-family: Microsoft YaHei;'>"
-                "<b>%1月</b><br/>金额: <span style='color:#3b6ea5; font-size:14px;'>￥%2</span>"
+                "<b>%1月</b><br/>"
+                "金额: <span style='color:#3b6ea5; font-size:14px;'>￥%2</span>"
                 "</div>"
             ).arg(index + 1).arg(barset->at(index), 0, 'f', 2);
+
             QToolTip::showText(QCursor::pos(), tooltip, barChartView);
+
+            // 2. 高亮单根柱子
+            barset->setLabelColor(QColor("#3b6ea5"));
+            //barset->setPen(QPen(QColor("#1e3a5f"), 2));
         } else {
-            barset->setPen(QPen(Qt::NoPen));
             QToolTip::hideText();
         }
     });
