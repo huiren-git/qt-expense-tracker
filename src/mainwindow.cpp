@@ -14,7 +14,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     db.openDatabase();
     db.createTables();
-    db.insertDefaultCategories();
+    db.insertDefaultTables();
+
+    db.importAlipayCsv(
+        QStringLiteral("D:/softwareProject/test/支付宝交易明细(20250922-20251222).csv")
+    );
+
+
 }
 
 MainWindow::~MainWindow()
