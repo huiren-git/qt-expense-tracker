@@ -35,9 +35,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 检查数据库是否为空，决定显示空状态还是默认视图
     // TODO: 连接数据库检查逻辑
-    // 暂时假设有数据，显示周度视图
-    // showEmptyState();
-    showWeekView();
+
+    // 暂时假设有数据，默认显示周度视图
+    // 无数据则使用showWeekView();
+   //   showEmptyState();
+   showWeekView();
 
     // 全局样式表
     qApp->setStyleSheet(
@@ -264,16 +266,12 @@ void MainWindow::setupContentArea()
     connect(startImportBtn, &QPushButton::clicked, this, &MainWindow::onImportClicked);
     emptyLayout->addWidget(startImportBtn);
 
-    QHBoxLayout *hintLayout = new QHBoxLayout();
-    QLabel *arrowLabel = new QLabel("→");
-    arrowLabel->setStyleSheet("color: #3b6ea5; font-size: 20px;");
+    emptyLayout->addSpacing(15);
+    // 提示文字放在按钮下方，居中，加粗
     QLabel *hintLabel = new QLabel("点击问号查看教程");
-    hintLabel->setStyleSheet("color: #666; font-size: 14px;");
-    hintLayout->addStretch();
-    hintLayout->addWidget(arrowLabel);
-    hintLayout->addWidget(hintLabel);
-    hintLayout->addStretch();
-    emptyLayout->addLayout(hintLayout);
+    hintLabel->setStyleSheet("color: #666; font-size: 14px; font-weight: bold;");
+    hintLabel->setAlignment(Qt::AlignCenter);
+    emptyLayout->addWidget(hintLabel);
 
     // 各视图页面
     weekViewWidget = new WeekViewWidget();
@@ -297,10 +295,28 @@ void MainWindow::setupContentArea()
 void MainWindow::showEmptyState()
 {
     contentStack->setCurrentWidget(emptyStateWidget);
+    // 禁用左侧栏按钮
+    weekButton->setEnabled(false);
+    monthButton->setEnabled(false);
+    yearButton->setEnabled(false);
+
+    // 取消所有按钮的选中状态
+    weekButton->setChecked(false);
+    monthButton->setChecked(false);
+    yearButton->setChecked(false);
+
+    // 重置按钮样式
+    weekButton->setStyleSheet("");
+    monthButton->setStyleSheet("");
+    yearButton->setStyleSheet("");
 }
 
 void MainWindow::showWeekView()
 {
+    // 启用左侧栏按钮
+    weekButton->setEnabled(true);
+    monthButton->setEnabled(true);
+    yearButton->setEnabled(true);
     currentViewType = "week";
     contentStack->setCurrentWidget(weekViewWidget);
     weekButton->setChecked(true);
@@ -318,6 +334,10 @@ void MainWindow::showWeekView()
 
 void MainWindow::showMonthView()
 {
+    // 启用左侧栏按钮
+    weekButton->setEnabled(true);
+    monthButton->setEnabled(true);
+    yearButton->setEnabled(true);
     currentViewType = "month";
     contentStack->setCurrentWidget(monthViewWidget);
     monthButton->setChecked(true);
@@ -335,6 +355,10 @@ void MainWindow::showMonthView()
 
 void MainWindow::showYearView()
 {
+    // 启用左侧栏按钮
+    weekButton->setEnabled(true);
+    monthButton->setEnabled(true);
+    yearButton->setEnabled(true);
     currentViewType = "year";
     contentStack->setCurrentWidget(yearViewWidget);
     yearButton->setChecked(true);

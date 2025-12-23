@@ -175,9 +175,16 @@ void DayDetailWidget::loadDayData(const QString &date)
         //.arg(date));
 
     // TODO: 调用后端接口获取数据
-    // QJsonObject request;
-    // request["date"] = date;
-    // emit queryDayRecords(request);
+
+    //currentDate = date;
+
+    // 构造 API 2.2.4 请求
+
+    //QJsonObject request;
+    //request["date"] = date;
+
+    // 发送给后台
+    //emit queryDayRecords(request);
 }
 
 void DayDetailWidget::updateDayData(const QJsonObject &data)
@@ -265,7 +272,7 @@ void DayDetailWidget::onAddClicked()
     if (dialog->exec() == QDialog::Accepted) {
         QJsonObject record = dialog->getRecordData();
         // TODO: 发送新增请求
-        emit addRecordRequested();
+        emit addRecordRequested(record);
     }
 }
 
@@ -286,21 +293,81 @@ void DayDetailWidget::onEditClicked(int row)
     RecordEditDialog *dialog = new RecordEditDialog(this, true);
     dialog->setRecordData(record);
     if (dialog->exec() == QDialog::Accepted) {
-        QJsonObject updatedRecord = dialog->getRecordData();
-        // TODO: 发送更新请求
-        emit editRecordRequested(updatedRecord);
-    }
+            QJsonObject revisedData = dialog->getRecordData();
+
+            QJsonObject request;
+            request["transactionDate"] = record["transactionDate"]; // 原始主键
+            request["revised"] = revisedData; // 修改后的内容
+
+            emit editRecordRequested(request);
+        }
 }
 
 void DayDetailWidget::onDeleteClicked(int row)
 {
-    int ret = QMessageBox::question(this, "确认删除", "确定要删除这条记录吗？",
-        QMessageBox::Yes | QMessageBox::No);
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("确认删除");
+    msgBox.setText("确定要删除这条记录吗？");
+    msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+    msgBox.setButtonText(QMessageBox::Ok, "确认");
+    msgBox.setButtonText(QMessageBox::Cancel, "取消");
 
-    if (ret == QMessageBox::Yes) {
-        // TODO: 获取交易时间并发送删除请求
-        // qstring date = ...;
-        // emit deleteRecordRequested(date);
+    // 1. 核心布局美化：压缩间距，设置背景
+    msgBox.setStyleSheet(
+        "QMessageBox { "
+        "  background-color: white; "
+        "}"
+        "QLabel { "
+        "  color: #333; "
+        "  font-size: 14px; "
+        "  min-height: 50px; "
+        "  padding-top: 10px; "
+        "  qproperty-alignment: 'AlignCenter'; "
+        "}"
+        "QWidget { "
+        "  text-alignment: center; "   /* 强制内部组件对齐 */
+        "}"
+    );
+
+    // 2. 缩小确认按钮 (红色圆角矩形)
+    QPushButton *okBtn = qobject_cast<QPushButton*>(msgBox.button(QMessageBox::Ok));
+    if (okBtn) {
+        okBtn->setFixedSize(65, 28);   // 进一步缩小尺寸
+        okBtn->setStyleSheet(
+            "QPushButton { "
+            "  background-color: #e74c3c; "
+            "  color: white; "
+            "  border-radius: 10px; "      /* 高度 28 的一半实现圆角 */
+            "  font-size: 12px; "
+            "  border: none; "
+            "  margin-right: 5px; "        /* 与取消按钮拉开一点距离 */
+            "}"
+            "QPushButton:hover { background-color: #c0392b; }"
+        );
+    }
+
+    // 3. 缩小取消按钮 (浅蓝色圆角矩形)
+    QPushButton *cancelBtn = qobject_cast<QPushButton*>(msgBox.button(QMessageBox::Cancel));
+    if (cancelBtn) {
+        cancelBtn->setFixedSize(65, 28); // 与确认按钮尺寸一致
+        cancelBtn->setStyleSheet(
+            "QPushButton { "
+            "  background-color: #3b6ea5; "
+            "  color: white; "
+            "  border-radius: 10px; "
+            "  font-size: 12px; "
+            "  border: none; "
+            "}"
+            "QPushButton:hover { background-color: #4a7fb8; }"
+        );
+    }
+
+    // 4. 执行并处理逻辑
+    if (msgBox.exec() == QMessageBox::Ok) {
+        QString transDate = recordsTable->item(row, 1)->text();
+        QJsonObject request;
+        request["transactionDate"] = transDate;
+        emit deleteRecordRequested(request);
     }
 }
 

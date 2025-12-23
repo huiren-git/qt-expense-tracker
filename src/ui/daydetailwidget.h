@@ -24,12 +24,11 @@ public slots:
     void onBackClicked();
 
 signals:
+    void queryDayRecords(const QJsonObject &request); // 查询
+    void addRecordRequested(const QJsonObject &record); // 新增
+    void editRecordRequested(const QJsonObject &record); // 修改
+    void deleteRecordRequested(const QJsonObject &request); // 删除
     void backToMainView();
-    void addRecordRequested();
-    void editRecordRequested(const QJsonObject &record);
-    void deleteRecordRequested(qint64 id);
-    void queryDayRecords(const QJsonObject &request);
-
 private:
     void setupUI();
     void setupHeader();
