@@ -569,7 +569,7 @@ void WeekViewWidget::updateWeekData(const QJsonObject &json)
     QDate firstDay(year, 1, 4);
     QDate weekStart = firstDay.addDays(-(firstDay.dayOfWeek() - 1)).addDays((week - 1) * 7);
     QDate weekEnd = weekStart.addDays(6);
-    weekRangeLabel->setText(QString("%1.%2")
+    weekRangeLabel->setText(QString("%1 - %2")
         .arg(weekStart.toString("yyyy.MM.dd")).arg(weekEnd.toString("yyyy.MM.dd")));
     weekRangeLabel->setFont(QFont("DengXian", 12, QFont::Bold));
 

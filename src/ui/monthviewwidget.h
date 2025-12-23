@@ -2,16 +2,16 @@
 #define MONTHVIEWWIDGET_H
 
 #include <QWidget>
-#include <QComboBox>
-#include <QCalendarWidget>
-#include <QPushButton>
 #include <QLabel>
-#include <QChart>
-#include <QChartView>
-#include <QPieSeries>
+#include <QPushButton>
 #include <QListWidget>
+#include <QCalendarWidget>
+#include <QComboBox>
 #include <QHBoxLayout>
-#include <QJsonObject>
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QPainter>
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -21,15 +21,17 @@ class MonthViewWidget : public QWidget
 
 public:
     explicit MonthViewWidget(QWidget *parent = nullptr);
-
-public slots:
-    void switchTransactionType(const QString &type);
-    void onMonthChanged(int year, int month);
-    void onDayClicked(const QString &date);
+    int getCurrentMonth() const { return currentMonth; };
+    int getCurrentYear() const { return currentYear; };
+    double getDayAmount(const QDate &date) const;
+    int getCalendarMonthShown() const { return calendarWidget ? calendarWidget->monthShown() : currentMonth; };
 
 signals:
     void dayClicked(const QString &date);
-    void queryMonthData(const QJsonObject &request);
+
+private slots:
+    void switchTransactionType(const QString &type);
+    void onMonthChanged(int year, int month);
 
 private:
     void setupUI();
@@ -39,22 +41,32 @@ private:
     void setupMonthSelector();
     void setupTransactionTypeCards();
     void setupCalendar();
-    void loadMonthData();
+    QFrame* createCalendarContainer();
 
-    QComboBox *yearComboBox;
-    QComboBox *monthComboBox;
-    QHBoxLayout *monthSelectorLayout;
+    // 数据处理
+    void loadTestData();
+    void updateMonthData(const QJsonObject &json);
+
+    // 状态变量
+    int currentYear;
+    int currentMonth;
+    QString currentTransactionType;
+    QMap<QPieSlice*, QJsonObject> sliceDataMap;
+    QMap<QDate, double> m_dayAmounts; // 存储日期 -> 金额的映射
+
+    // UI 组件
+    QPieSeries *pieSeries;
     QChartView *pieChartView;
     QListWidget *rankListWidget;
     QLabel *commentLabel;
+
     QPushButton *expenseCard;
     QPushButton *incomeCard;
     QCalendarWidget *calendarWidget;
 
-
-    QString currentTransactionType;
-    int currentYear;
-    int currentMonth;
+    QComboBox *yearComboBox;
+    QComboBox *monthComboBox;
+    QHBoxLayout *monthSelectorLayout;
 };
 
 #endif // MONTHVIEWWIDGET_H

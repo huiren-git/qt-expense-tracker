@@ -41,14 +41,24 @@ private:
     void setupTransactionTypeCards();
     void setupBarChart();
     void loadYearData();
+    void updateYearData(const QJsonObject &);
+    QPushButton* createCustomCard(const QString &);
 
+
+    QWidget *yearSelectorWidget;
+    QLabel *yearLabel;
     QComboBox *yearComboBox;
     QChartView *pieChartView;
+    QPieSeries *pieSeries;
+    QMap<QPieSlice*, QJsonObject> sliceDataMap;
     QListWidget *rankListWidget;
     QLabel *commentLabel;
     QPushButton *expenseCard;
     QPushButton *incomeCard;
     QChartView *barChartView;
+    QBarSeries *barSeries = nullptr;
+    QBarSet *bar;
+    QBarSet *barSet = nullptr;
 
     QString currentTransactionType;
     int currentYear;
