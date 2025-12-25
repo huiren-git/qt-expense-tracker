@@ -9,6 +9,8 @@
 #include <QLabel>
 #include <QJsonObject>
 #include <QIntValidator>
+#include <QDoubleValidator>
+
 
 RecordEditDialog::RecordEditDialog(QWidget *parent, bool isEdit)
     : QDialog(parent)
@@ -77,6 +79,9 @@ void RecordEditDialog::setupForm()
     setupDateTimeInputs();
     formLayout->addRow("交易时间:", dateTimeWidget);
 
+    setupAmountEdit();
+    formLayout->addRow("交易金额:", amountEdit);
+
     setupTransactionTypeRadio();
     formLayout->addRow("交易类型:", transactionTypeWidget);
 
@@ -109,32 +114,43 @@ void RecordEditDialog::setupDateTimeInputs()
     yearEdit = new QLineEdit();
     yearEdit->setFixedWidth(60);
     yearEdit->setPlaceholderText("年");
-    yearEdit->setValidator(new QIntValidator(2000, 2099, this));
+    QRegExp regYearExp("^([2][0][0-9][0-9])$");
+    QValidator *regYearValidator = new QRegExpValidator(regYearExp);
+    yearEdit->setValidator(regYearValidator);
 
     monthEdit = new QLineEdit();
     monthEdit->setFixedWidth(40);
     monthEdit->setPlaceholderText("月");
-    monthEdit->setValidator(new QIntValidator(1, 12, this));
+    QRegExp regMonthExp("^([1-9]|[1][0-2])$");
+    QValidator *regMonthValidator = new QRegExpValidator(regMonthExp);
+    monthEdit->setValidator(regMonthValidator);
 
     dayEdit = new QLineEdit();
     dayEdit->setFixedWidth(40);
     dayEdit->setPlaceholderText("日");
-    dayEdit->setValidator(new QIntValidator(1, 31, this));
+    QRegExp regDayExp("^([1-9]|[1-2][0-9]|[3][0-1])$");
+    QValidator *regDayValidator = new QRegExpValidator(regDayExp);
+    dayEdit->setValidator(regDayValidator);
 
     hourEdit = new QLineEdit();
     hourEdit->setFixedWidth(40);
     hourEdit->setPlaceholderText("时");
-    hourEdit->setValidator(new QIntValidator(0, 23, this));
+    QRegExp regHourExp("^([0-9]|[1][0-9]|[2][0-3])$");
+    QValidator *regHourValidator = new QRegExpValidator(regHourExp);
+    hourEdit->setValidator(regHourValidator);
 
     minuteEdit = new QLineEdit();
     minuteEdit->setFixedWidth(40);
     minuteEdit->setPlaceholderText("分");
-    minuteEdit->setValidator(new QIntValidator(0, 59, this));
+    QRegExp regMinuteExp("^([0-9]|[1-5][0-9])$");
+    QValidator *regMinuteValidator = new QRegExpValidator(regMinuteExp);
+    minuteEdit->setValidator(regMinuteValidator);
 
     secondEdit = new QLineEdit();
     secondEdit->setFixedWidth(40);
     secondEdit->setPlaceholderText("秒");
-    secondEdit->setValidator(new QIntValidator(0, 59, this));
+    //因为秒和分限制相同使用同一验证器
+    secondEdit->setValidator(regMinuteValidator);
 
     dateTimeLayout->addWidget(yearEdit);
     dateTimeLayout->addWidget(new QLabel("-"));
@@ -157,6 +173,17 @@ void RecordEditDialog::setupDateTimeInputs()
     hourEdit->setText(QString::number(now.time().hour()));
     minuteEdit->setText(QString::number(now.time().minute()));
     secondEdit->setText(QString::number(now.time().second()));
+}
+
+void RecordEditDialog::setupAmountEdit(){
+    //创建控件
+    amountEdit = new QLineEdit();
+
+    //设置金额范围
+    amountEdit->setPlaceholderText("元");
+    QDoubleValidator *validator = new QDoubleValidator(0,999999999,2,this);
+    validator->setNotation(QDoubleValidator::StandardNotation);
+    amountEdit->setValidator(validator);
 }
 
 void RecordEditDialog::setupTransactionTypeRadio()
@@ -235,15 +262,16 @@ QJsonObject RecordEditDialog::getRecordData() const
     record["month"] = date.month();
     record["week"] = date.weekNumber();
 
-    record["transactionType"] = expenseRadio->isChecked() ? "支出" : "收入";
-    record["category"] = categoryComboBox->currentText();
+    record["amount"] = amountEdit->text().toDouble();
+    record["transactionType"] = expenseRadio->isChecked() ? "income" : "expense";
+    record["category"] = categoryComboBox->currentIndex()+1;
 
     if (alipayRadio->isChecked()) {
-        record["transactionMethod"] = "支付宝";
+        record["transactionMethod"] = 1;
     } else if (cashRadio->isChecked()) {
-        record["transactionMethod"] = "现金";
+        record["transactionMethod"] = 2;
     } else {
-        record["transactionMethod"] = "其他";
+        record["transactionMethod"] = 3;
     }
 
     record["counterparty"] = counterpartyEdit->text();
@@ -272,6 +300,8 @@ void RecordEditDialog::setRecordData(const QJsonObject &record)
         minuteEdit->setText(timeParts[1]);
         secondEdit->setText(timeParts[2]);
     }
+
+    amountEdit->setText(record["amount"].toString());
 
     QString transactionType = record["transactionType"].toString();
     if (transactionType == "支出") {

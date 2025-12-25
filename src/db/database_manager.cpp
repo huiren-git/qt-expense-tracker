@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QDateTime>
+#include <QRegularExpression>
 
 DatabaseManager::DatabaseManager()
 {
@@ -254,7 +255,11 @@ void DatabaseManager::importAlipayCsv(const QString &csvPath)
         QString amount        = cols[6];
         QString methodName    = cols[7];   // 收/付款方式
         QString state         = cols[8];   // 交易状态
-        QString orderNo       = cols[9];   // 交易订单号
+        QString orderNo = cols[9];
+        orderNo.remove('"');
+        orderNo = orderNo.trimmed();
+        orderNo.remove(QRegularExpression("[^0-9]"));
+
         QString remark        = cols[11];
 
         // ---------- 筛选逻辑 ----------
@@ -287,17 +292,6 @@ void DatabaseManager::importAlipayCsv(const QString &csvPath)
         if(q.next())
             categoryId = q.value(0).toInt();
 
-        // ---------- 支付方式 ----------
-        QSqlQuery pm;
-        pm.prepare("INSERT OR IGNORE INTO transaction_method(name) VALUES(?)");
-        pm.addBindValue(methodName);
-        pm.exec();
-
-        QSqlQuery pm2("SELECT id FROM transaction_method WHERE name='" + methodName + "'");
-        int methodId = -1;
-        if(pm2.next())
-            methodId = pm2.value(0).toInt();
-
         // ---------- 插入 bill_record ----------
         QSqlQuery ins;
         ins.prepare(
@@ -314,7 +308,7 @@ void DatabaseManager::importAlipayCsv(const QString &csvPath)
         ins.addBindValue(amount.toDouble());
         ins.addBindValue(type);
         ins.addBindValue(categoryId);
-        ins.addBindValue(methodId);
+        ins.addBindValue(2);
         ins.addBindValue(counterparty);
         ins.addBindValue(description);
         ins.addBindValue(remark);
@@ -436,7 +430,6 @@ QSqlQuery DatabaseManager::getRecordsByDay(const QDateTime &date)
     );
     query.bindValue(":date", date.toString("yyyy-MM-dd"));
     query.exec();
-
     return query;
 }
 
@@ -551,7 +544,6 @@ QSqlQuery DatabaseManager::getTotalRecordsByDay(const QDateTime &date)
     );
     query.bindValue(":date", date.toString("yyyy-MM-dd"));
     query.exec();
-
     return query;
 }
 
@@ -737,10 +729,10 @@ QString DatabaseManager::getTopCategoryExpenseByYearWithComment(int year)
         }
     }
 
-    qDebug() << "Top Category: " << topCategoryName;
-    qDebug() << "Total Amount: " << topCategoryTotal;
-    qDebug() << "Percentage: " << maxPercentage << "%";
-    qDebug() << "Comment: " << comment;
+    qDebug() << "top分类: " << topCategoryName;
+    qDebug() << "总成交量: " << topCategoryTotal;
+    qDebug() << "金额占比: " << maxPercentage << "%";
+    qDebug() << "评论: " << comment;
 
     return comment;
 }
@@ -820,10 +812,10 @@ QString DatabaseManager::getTopCategoryByMonthWithComment(int year, int month, c
         }
     }
 
-    qDebug() << "Top Category: " << topCategoryName;
-    qDebug() << "Total Amount: " << topCategoryTotal;
-    qDebug() << "Percentage: " << maxPercentage << "%";
-    qDebug() << "Comment: " << comment;
+    qDebug() << "top分类: " << topCategoryName;
+    qDebug() << "总成交量: " << topCategoryTotal;
+    qDebug() << "金额占比: " << maxPercentage << "%";
+    qDebug() << "评论: " << comment;
 
     return comment;
 }
@@ -902,54 +894,116 @@ QString DatabaseManager::getTopCategoryByWeekWithComment(int year, int week, con
         }
     }
 
-    qDebug() << "Top Category: " << topCategoryName;
-    qDebug() << "Total Amount: " << topCategoryTotal;
-    qDebug() << "Percentage: " << maxPercentage << "%";
-    qDebug() << "Comment: " << comment;
+    qDebug() << "top分类: " << topCategoryName;
+    qDebug() << "总成交量: " << topCategoryTotal;
+    qDebug() << "金额占比: " << maxPercentage << "%";
+    qDebug() << "评论: " << comment;
 
     return comment;
 }
 
 // 修改某条消费记录
-void DatabaseManager::updateRecord(int id, double amount, QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description, QString remark) {
-    QSqlQuery query;
-    query.prepare("UPDATE bill_record SET amount = :amount, transaction_type = :transaction_type, transaction_date = :transaction_date, category_id = :category_id, "
-                  "transaction_method_id = :method_id, counterparty = :counterparty, description = :description, remark = :remark "
-                  "WHERE id = :id");
+void DatabaseManager::updateRecord(int id, double amount, QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description, QString source_id, QString remark) {
+    // 处理年/月/周
+    QDateTime dt = QDateTime::fromString(transactionDate, "yyyy-MM-dd HH:mm:ss");
+    int year = dt.date().year();
+    int month = dt.date().month();
 
-    query.bindValue(":id", id);
+    int week;
+    int weekYear;
+    week = dt.date().weekNumber(&weekYear);
+
+    if (methodId == 1) {       // 现金不需要 source_id
+        source_id = "";
+    }
+
+    QSqlQuery query;
+    query.prepare(
+        "UPDATE bill_record SET "
+        "transaction_date = :transaction_date, "
+        "year = :year, "
+        "month = :month, "
+        "week = :week, "
+        "amount = :amount, "
+        "transaction_type = :transaction_type, "
+        "category_id = :category_id, "
+        "transaction_method_id = :method_id, "
+        "counterparty = :counterparty, "
+        "description = :description, "
+        "source_id = :source_id, "
+        "remark = :remark "
+        "WHERE id = :id"
+    );
+
+    query.bindValue(":transaction_date", transactionDate);
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
+    query.bindValue(":week", week);
     query.bindValue(":amount", amount);
     query.bindValue(":transaction_type", transaction_type);
-    query.bindValue(":transaction_date", transactionDate);
     query.bindValue(":category_id", categoryId);
     query.bindValue(":method_id", methodId);
     query.bindValue(":counterparty", counterparty);
     query.bindValue(":description", description);
+    query.bindValue(":source_id", source_id);
     query.bindValue(":remark", remark);
+    query.bindValue(":id", id);
 
     if (!query.exec()) {
-        qDebug() << "Error updating expense record: " << query.lastError();
+        qDebug() << "修改记录失败: " << query.lastError();
+    }
+    else {
+        qDebug() << "修改记录成功: ";
     }
 }
 
 // 新增一条消费记录
-void DatabaseManager::addRecord(double amount, QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description, QString remark, QString sourceId) {
-    QSqlQuery query;
-    query.prepare("INSERT INTO bill_record (transaction_date, amount, transaction_type, category_id, transaction_method_id, counterparty, description, remark, source_id) "
-                  "VALUES (:transaction_date, :amount, :transaction_type, :category_id, :method_id, :counterparty, :description, :remark, :source_id)");
+void DatabaseManager::addRecord(double amount, QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description, QString source_id, QString remark) {
+    // 处理年/月/周
+    QDateTime dt = QDateTime::fromString(transactionDate, "yyyy-MM-dd HH:mm:ss");
+    int year = dt.date().year();
+    int month = dt.date().month();
 
+    int week;
+    int weekYear;
+    week = dt.date().weekNumber(&weekYear);
+
+    QSqlQuery query;
+    query.prepare(
+            "INSERT INTO bill_record("
+            "transaction_date, year, month, week, "
+            "amount, transaction_type, "
+            "category_id, transaction_method_id, "
+            "counterparty, description, source_id, remark"
+            ") VALUES ("
+            ":transaction_date, :year, :month, :week, "
+            ":amount, :transaction_type, "
+            ":category_id, :method_id, "
+            ":counterparty, :description, :source_id, :remark)"
+        );
+
+    //现金不计订单号
+    if (methodId == 1) {
+        source_id = "";
+    }
     query.bindValue(":transaction_date", transactionDate);
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
+    query.bindValue(":week", week);
     query.bindValue(":amount", amount);
     query.bindValue(":transaction_type", transaction_type);
     query.bindValue(":category_id", categoryId);
     query.bindValue(":method_id", methodId);
     query.bindValue(":counterparty", counterparty);
     query.bindValue(":description", description);
+    query.bindValue(":source_id", source_id);
     query.bindValue(":remark", remark);
-    query.bindValue(":source_id", sourceId);
 
     if (!query.exec()) {
-        qDebug() << "Error adding expense record: " << query.lastError();
+        qDebug() << "添加记录失败: " << query.lastError();
+    }
+    else {
+        qDebug() << "添加记录成功: ";
     }
 }
 
@@ -961,7 +1015,10 @@ void DatabaseManager::deleteRecord(int id) {
     query.bindValue(":id", id);
 
     if (!query.exec()) {
-        qDebug() << "Error deleting expense record: " << query.lastError();
+        qDebug() << "删除记录失败: " << query.lastError();
+    }
+    else {
+        qDebug() << "删除记录成功: ";
     }
 }
 
@@ -993,7 +1050,7 @@ int DatabaseManager::getExpenseBillIdByDate(QString transactionDate) {
     query.bindValue(":transaction_date", transactionDate);
 
     if (!query.exec()) {
-        qDebug() << "Error fetching expense bills by date: " << query.lastError();
+        qDebug() << "无法根据交易日期找到消费订单id: " << query.lastError();
         return billId;
     }
     return billId;
@@ -1008,7 +1065,7 @@ int DatabaseManager::getIncomeBillIdByDate(QString transactionDate) {
     query.bindValue(":transaction_date", transactionDate);
 
     if (!query.exec()) {
-        qDebug() << "Error fetching income bills by date: " << query.lastError();
+        qDebug() << "无法根据日期找到收入订单id: " << query.lastError();
         return billId;
     }
 

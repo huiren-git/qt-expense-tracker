@@ -10,6 +10,9 @@
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QTextCharFormat>
+#include <QDebug>
+#include <QSqlQuery>
+#include "../db/database_manager.h"
 
 class CalendarDataDelegate : public QStyledItemDelegate {
     MonthViewWidget *m_view;
@@ -119,7 +122,7 @@ MonthViewWidget::MonthViewWidget(QWidget *parent)
     currentMonth = today.month();
 
     setupUI();
-    loadTestData();
+    loadMonthData();
 }
 
 
@@ -329,7 +332,7 @@ void MonthViewWidget::switchTransactionType(const QString &type)
     expenseCard->setChecked(type == "支出");
     incomeCard->setChecked(type == "收入");
 
-    loadTestData();
+    loadMonthData();
     calendarWidget->update();
 }
 
@@ -485,7 +488,7 @@ void MonthViewWidget::onMonthChanged(int year, int month) {
     }
     calendarWidget->setCurrentPage(year, month);
     calendarWidget->setSelectedDate(QDate(year, month, 1));
-    loadTestData();
+    loadMonthData();
     calendarWidget->update();
 }
 
@@ -526,4 +529,72 @@ void MonthViewWidget::loadTestData() {
         resp["monthCalendar"] = calArray;
         updateMonthData(resp);
         updateMonthData(resp);
+}
+
+void MonthViewWidget::loadMonthData(){
+    //载入数据库
+    DatabaseManager &db = DatabaseManager::instance();
+    if(!db.isReady()){
+        if(!db.openDatabase()){
+            loadTestData();
+            return;
+        }
+    }
+    QSqlQuery query;
+
+    QJsonObject resp;
+    resp["operation"] = true;
+    query = db.getTotalIncomeByMonth(currentYear,currentMonth);
+    query.next();
+    double income= query.value(0).toDouble();
+    resp["monthlyIncomeTotal"] = income;
+    query = db.getTotalExpenseByMonth(currentYear,currentMonth);
+    query.next();
+    double expense= query.value(0).toDouble();
+    resp["monthlyExpenseTotal"] = expense;
+
+    QJsonObject c1;
+    QJsonArray pie;
+    if (currentTransactionType == "支出") {
+        query = db.getExpenseCategoryStatsByMonth(currentYear,currentMonth);
+        while(query.next()){
+            c1["category"] = query.value(0).toString();
+            c1["totalAmount"] = query.value(1).toDouble();
+            c1["ratio"] = query.value(1).toDouble()/expense;
+            c1["count"] = query.value(2).toInt();
+            pie.append(c1);
+        }
+    } else {
+        query = db.getIncomeCategoryStatsByMonth(currentYear,currentMonth);
+        while(query.next()){
+            c1["category"] = query.value(0).toString();
+            c1["totalAmount"] = query.value(1).toDouble();
+            c1["ratio"] = query.value(1).toDouble()/income;
+            c1["count"] = query.value(2).toInt();
+            pie.append(c1);
+        }
+    }
+    resp["pie"] = pie;
+    QString comment=db.getTopCategoryByMonthWithComment(currentYear,currentMonth,currentTransactionType);
+    resp["comment"] = comment;
+
+    QJsonArray calArray;
+    QDate first(currentYear, currentMonth, 1);
+    int days = first.daysInMonth();
+    for (int d = 1; d <= days; ++d) {
+        QDate day(currentYear, currentMonth, d);
+        QJsonObject obj;
+        obj["date"] = day.toString("yyyy-MM-dd");
+        query=db.getTotalRecordsByDay(QDateTime(day,QTime(0,0,0)));
+        query.next();
+        if (currentTransactionType == "支出") {
+            obj["dailyAmount"] = query.value(0).toDouble(); // 示例：替换为真实数据
+        } else {
+            obj["dailyAmount"] = query.value(1).toDouble();
+        }
+        calArray.append(obj);
+    }
+    resp["monthCalendar"] = calArray;
+    updateMonthData(resp);
+
 }

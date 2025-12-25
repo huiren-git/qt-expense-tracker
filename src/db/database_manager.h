@@ -53,9 +53,9 @@ public:
 
     /*收支记录增删改*/
     // 修改某条记录
-    void updateRecord(int id, double amount,QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description, QString remark);
+    void updateRecord(int id, double amount,QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description,QString source_id, QString remark);
     // 新增一条记录
-    void addRecord(double amount, QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description, QString remark, QString sourceId);
+    void addRecord(double amount, QString transaction_type, QString transactionDate, int categoryId, int methodId, QString counterparty, QString description, QString source_id = "",QString remark="");
     // 删除某条记录
     void deleteRecord(int id);
 

@@ -7,6 +7,9 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QSqlQuery>
+#include <QDebug>
+#include "../db/database_manager.h"
 
 DayDetailWidget::DayDetailWidget(QWidget *parent)
     : QWidget(parent)
@@ -132,39 +135,91 @@ void DayDetailWidget::loadDayData(const QString &date)
 {
     currentDate = date;
 
+    //初始配置，打开数据库
+    DatabaseManager &db = DatabaseManager::instance();
+    if(!db.isReady()){
+        if(!db.openDatabase()){
+
+            return;
+        }
+    }
+    QSqlQuery query;
+
     // 创建测试数据
         QJsonObject testData;
         testData["operation"] = true;
-        testData["dailyIncome"] = 500.00;
-        testData["dailyExpense"] = 2600.00;
+        QDateTime datetime(QDate::fromString(date),QTime(0,0,0));
+        query = db.getTotalRecordsByDay(datetime);
+        query.next();
+        double income = query.value(1).toDouble();
+        double expense = query.value(0).toDouble();
+        testData["dailyIncome"] = income;
+        testData["dailyExpense"] = expense;
 
         QJsonArray records;
-
         QJsonObject record1;
-        record1["id"] = 1001;
-        record1["transactionDate"] = date + " 10:30:00";
-        record1["amount"] = 2000.00;
-        record1["transactionType"] = "支出";
-        record1["category"] = "日用百货";
-        record1["transactionMethod"] = "支付宝";
-        record1["counterparty"] = "XX电商平台";
-        record1["productName"] = "智能手机";
-        record1["remark"] = "分期购买";
-        record1["sourceId"] = "202401152030001234567890";
-        records.append(record1);
+        query = db.getRecordsByDay(datetime);
+        while(query.next()){
+            record1["id"] = query.value(0).toInt();
+            record1["transactionDate"] = query.value(1).toString();
+            record1["amount"] = query.value(5).toDouble();
+            if(query.value(6).toString()=="income"){
+                record1["transactionType"] = "收入";
+            }
+            else{
+                record1["transactionType"] = "支出";
+            }
+            switch(query.value(7).toInt()){
+                case 1:record1["category"] = "餐饮美食";break;
+                case 2:record1["category"] = "服饰装扮";break;
+                case 3:record1["category"] = "日用百货";break;
+                case 4:record1["category"] = "家居家装";break;
+                case 5:record1["category"] = "数码电器";break;
+                case 6:record1["category"] = "运动户外";break;
+                case 7:record1["category"] = "美容美发";break;
+                case 8:record1["category"] = "母婴亲子";break;
+                case 9:record1["category"] = "宠物";break;
+                case 10:record1["category"] = "交通出行";break;
+                case 11:record1["category"] = "爱车养车";break;
+                case 12:record1["category"] = "住房物业";break;
+                case 13:record1["category"] = "酒店旅游";break;
+                case 14:record1["category"] = "文化休闲";break;
+                case 15:record1["category"] = "教育培训";break;
+                case 16:record1["category"] = "医疗健康";break;
+                case 17:record1["category"] = "生活服务";break;
+                case 18:record1["category"] = "公共服务";break;
+                case 19:record1["category"] = "商业服务";break;
+                case 20:record1["category"] = "公益捐赠";break;
+                case 21:record1["category"] = "互助保障";break;
+                case 22:record1["category"] = "投资理财";break;
+                case 23:record1["category"] = "保险";break;
+                case 24:record1["category"] = "信用借还";break;
+                case 25:record1["category"] = "充值缴费";break;
+                case 26:record1["category"] = "其他";break;
+                case 27:record1["category"] = "收入";break;
+                case 28:record1["category"] = "转账红包";break;
+                case 29:record1["category"] = "亲友代付";break;
+                case 30:record1["category"] = "账户存取";break;
+                case 31:record1["category"] = "退款";break;
+                case 32:record1["category"] = "其他";break;
+                default:record1["category"] = "其他";break;
+            }
 
-        QJsonObject record2;
-        record2["id"] = 1002;
-        record2["transactionDate"] = date + " 18:00:00";
-        record2["amount"] = 600.00;
-        record2["transactionType"] = "支出";
-        record2["category"] = "餐饮美食";
-        record2["transactionMethod"] = "现金";
-        record2["counterparty"] = "麦当劳";
-        record2["productName"] = "晚餐";
-        record2["remark"] = "";
-        record2["sourceId"] = QJsonValue();
-        records.append(record2);
+            if(query.value(8).toInt()==1){
+                record1["transactionMethod"] = "支付宝";
+            }
+            else if(query.value(8).toInt()==2){
+                record1["transactionMethod"] = "现金";
+            }
+            else{
+                record1["transactionMethod"] = "其他";
+            }
+            record1["counterparty"] = query.value(9).toString();
+            record1["productName"] = query.value(10).toString();
+            record1["remark"] = query.value(11).toString();
+            record1["sourceId"] = query.value(12).toString();
+            records.append(record1);
+        }
 
         testData["records"] = records;
 
@@ -272,6 +327,11 @@ void DayDetailWidget::onAddClicked()
     if (dialog->exec() == QDialog::Accepted) {
         QJsonObject record = dialog->getRecordData();
         // TODO: 发送新增请求
+        DatabaseManager &db=DatabaseManager::instance();
+        db.addRecord(record["amount"].toDouble(), record["transactionType"].toString(), record["transactionDate"].toString(),
+                     record["category"].toInt(), record["transactionMethod"].toInt(), record["counterparty"].toString(), record["productName"].toString(),
+                     record["sourceId"].toString(),record["remark"].toString());
+
         emit addRecordRequested(record);
     }
 }
@@ -280,6 +340,7 @@ void DayDetailWidget::onEditClicked(int row)
 {
     // 从表格获取记录数据
     QJsonObject record;
+    int id=recordsTable->item(row, 0)->text().toInt();
     record["transactionDate"] = recordsTable->item(row, 1)->text();
     record["amount"] = recordsTable->item(row, 2)->text();
     record["transactionType"] = recordsTable->item(row, 3)->text();
@@ -298,6 +359,10 @@ void DayDetailWidget::onEditClicked(int row)
             QJsonObject request;
             request["transactionDate"] = record["transactionDate"]; // 原始主键
             request["revised"] = revisedData; // 修改后的内容
+            DatabaseManager &db=DatabaseManager::instance();
+            db.updateRecord(id, revisedData["amount"].toDouble(), revisedData["transactionType"].toString(), revisedData["transactionDate"].toString(),
+                     revisedData["category"].toInt(), revisedData["transactionMethod"].toInt(), revisedData["counterparty"].toString(),
+                            revisedData["productName"].toString(), revisedData["sourceId"].toString(),revisedData["remark"].toString());
 
             emit editRecordRequested(request);
         }
@@ -364,9 +429,12 @@ void DayDetailWidget::onDeleteClicked(int row)
 
     // 4. 执行并处理逻辑
     if (msgBox.exec() == QMessageBox::Ok) {
+        int id = recordsTable->item(row, 0)->text().toInt();
         QString transDate = recordsTable->item(row, 1)->text();
         QJsonObject request;
         request["transactionDate"] = transDate;
+        DatabaseManager &db=DatabaseManager::instance();
+        db.deleteRecord(id);
         emit deleteRecordRequested(request);
     }
 }

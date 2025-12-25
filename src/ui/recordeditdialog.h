@@ -130,6 +130,7 @@ private:
     void setupUI();
     void setupForm();
     void setupDateTimeInputs();
+    void setupAmountEdit();
     void setupTransactionTypeRadio();
     void setupCategoryComboBox();
     void setupTransactionMethodRadio();
@@ -161,6 +162,7 @@ private:
     QRadioButton *cashRadio;
     QRadioButton *othersRadio;
 
+    QLineEdit *amountEdit;
     QLineEdit *counterpartyEdit;
     QLineEdit *productNameEdit;
     QLineEdit *remarkEdit;

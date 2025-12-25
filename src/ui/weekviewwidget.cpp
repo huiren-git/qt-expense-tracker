@@ -8,7 +8,9 @@
 #include <QJsonDocument>
 #include <QMessageBox>
 #include <QFont>
-
+#include <QSqlQuery>
+#include <QDebug>
+#include "../db/database_manager.h"
 
 
 WeekViewWidget::WeekViewWidget(QWidget *parent)
@@ -24,7 +26,7 @@ WeekViewWidget::WeekViewWidget(QWidget *parent)
 
     setupUI();
     // 加载测试数据
-    loadTestData();
+    loadWeekData();
 }
 
 void WeekViewWidget::setupUI()
@@ -88,7 +90,7 @@ void WeekViewWidget::setupUI()
             currentWeek = 52;
         }
         updateWeekDisplay();
-        loadTestData();
+        loadWeekData();
     });
 
     weekRangeLabel = new QLabel();
@@ -118,7 +120,7 @@ void WeekViewWidget::setupUI()
             currentWeek = 1;
         }
         updateWeekDisplay();
-        loadTestData();
+        loadWeekData();
     });
 
     selectorLayout->addWidget(prevWeekButton);
@@ -354,7 +356,7 @@ void WeekViewWidget::switchTransactionType(const QString &type)
         incomeCard->setChecked(true);
     }
 
-    loadTestData();
+    loadWeekData();
 }
 
 void WeekViewWidget::updateWeekDisplay()
@@ -488,6 +490,94 @@ void WeekViewWidget::loadWeekData()
     // request["year"] = currentYear;
     // request["type"] = (currentTransactionType == "支出") ? "expense" : "income";
     // emit queryWeekData(request);
+
+    //初始配置，打开数据库，初始化时间
+    DatabaseManager &db = DatabaseManager::instance();
+    if(!db.isReady()){
+        if(!db.openDatabase()){
+            loadTestData();
+            return;
+        }
+    }
+    QJsonObject response;
+    response["operation"] = true;
+    QJsonObject currentWeekObj;
+    currentWeekObj["year"] = currentYear;
+    currentWeekObj["week"] = currentWeek;
+    // 周总收支
+    QSqlQuery query = db.getTotalIncomeByWeek(currentYear,currentWeek);
+    query.next();
+    double income=query.value(0).toDouble();
+    currentWeekObj["weeklyIncomeTotal"] = income;
+    query = db.getTotalExpenseByWeek(currentYear,currentWeek);
+    double expense=query.value(0).toDouble();
+    qDebug() << expense;
+    currentWeekObj["weeklyExpenseTotal"] = expense;
+
+    //单日收支
+    QJsonArray currentBars;
+    QJsonArray previousBars;
+    QDate weekStart;
+    if(currentWeek > 1){
+        weekStart = getMondayOfISOWeek(currentYear, currentWeek-1);
+    }
+    else{
+        weekStart = getMondayOfISOWeek(currentYear-1, 52);
+    }
+    weekStart=weekStart.addDays(6);
+    for (int i = 0; i < 7; i++) {
+        query=db.getTotalRecordsByDay(QDateTime(weekStart.addDays(i+1),QTime(0,0,0)));
+        query.next();
+        QJsonObject cDay;
+        cDay["dailyExpense"] = query.value(0).toDouble();
+        cDay["dailyIncome"] = query.value(1).toDouble();
+        currentBars.append(cDay);
+
+        query=db.getTotalRecordsByDay(QDateTime(weekStart.addDays(i),QTime(0,0,0)));
+        query.next();
+        QJsonObject pDay;
+        pDay["dailyExpense"] = query.value(0).toDouble();
+        pDay["dailyIncome"] = query.value(1).toDouble();
+        previousBars.append(pDay);
+    }
+    currentWeekObj["dailyBars"] = currentBars;
+
+    QJsonObject previousWeekObj;
+    previousWeekObj["dailyBars"] = previousBars;
+
+    // 饼图数据根据类型变化
+    QJsonArray pieArray;
+    QJsonObject cat;
+    if (currentTransactionType == "支出") {
+        query = db.getExpenseCategoryStatsByWeek(currentYear,currentWeek);
+        while(query.next()){
+            cat["category"] = query.value(0).toString();
+            cat["totalAmount"] = query.value(1).toDouble();
+            cat["ratio"] = query.value(1).toDouble()/expense;
+            cat["count"] = query.value(2).toInt();
+            pieArray.append(cat);
+        }
+
+    } else {
+        query = db.getIncomeCategoryStatsByWeek(currentYear,currentWeek);
+        while(query.next()){
+            cat["category"] = query.value(0).toString();
+            cat["totalAmount"] = query.value(1).toDouble();
+            cat["ratio"] = query.value(1).toDouble()/income;
+            cat["count"] = query.value(2).toInt();
+            pieArray.append(cat);
+        }
+    }
+    pieArray.append(cat);
+    currentWeekObj["pie"] = pieArray;
+    QString comment = db.getTopCategoryByWeekWithComment(currentYear,currentWeek,currentTransactionType);
+    //currentWeekObj["comment"] = (currentTransactionType == "支出") ? "节约是美德" : "加油赚钱！";
+    currentWeekObj["comment"] = comment;
+    response["currentWeek"] = currentWeekObj;
+    response["previousWeek"] = previousWeekObj;
+
+    updateWeekData(response);
+
 }
 
 void WeekViewWidget::loadTestData()
@@ -497,7 +587,12 @@ void WeekViewWidget::loadTestData()
     QJsonObject currentWeekObj;
     currentWeekObj["year"] = currentYear;
     currentWeekObj["week"] = currentWeek;
-
+    DatabaseManager &db = DatabaseManager::instance();
+    if(!db.isReady()){
+        if(!db.openDatabase()){
+            //return;
+        }
+    }
     // 模拟数据
     currentWeekObj["weeklyIncomeTotal"] = 5000.0 + (currentWeek * 10);
     currentWeekObj["weeklyExpenseTotal"] = 3000.0 + (currentWeek * 5);
@@ -699,5 +794,5 @@ void WeekViewWidget::onWeekChanged(int year, int week)
     currentYear = year;
     currentWeek = week;
     updateWeekDisplay();
-    loadTestData();  // 使用测试数据
+    loadWeekData();  // 使用测试数据
 }

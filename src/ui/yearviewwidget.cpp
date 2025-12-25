@@ -14,7 +14,9 @@
 #include <QBrush>
 #include <QPen>
 #include <QBarSeries>
-
+#include <QDebug>
+#include <QSqlQuery>
+#include "../db/database_manager.h"
 
 YearViewWidget::YearViewWidget(QWidget *parent)
     : QWidget(parent)
@@ -346,32 +348,78 @@ void YearViewWidget::onYearChanged(int year)
 
 void YearViewWidget::loadYearData()
 {
-    // 模拟后端返回的 JSON
+    //载入数据库
+    DatabaseManager &db = DatabaseManager::instance();
+    if(!db.isReady()){
+        if(!db.openDatabase()){
+            return;
+        }
+    }
+    QSqlQuery query;
+
+    // 后端返回的 JSON
     QJsonObject mockResponse;
     mockResponse["year"] = currentYear;
-    mockResponse["comment"] = (currentTransactionType == "支出") ? "年度支出控制在预期内。" : "年度收入稳步增长。";
+    QString comment = db.getTopCategoryExpenseByYearWithComment(currentYear);
+    mockResponse["comment"] = comment;
+    //mockResponse["comment"] = (currentTransactionType == "支出") ? "年度支出控制在预期内。" : "年度收入稳步增长。";
 
-    // 模拟卡片总额
-    mockResponse["yearlyExpenseTotal"] = 45000.00;
-    mockResponse["yearlyIncomeTotal"] = 62000.00;
+    // 卡片总额
+    query=db.getTotalExpenseByYear(currentYear);
+    query.next();
+    double expense = query.value(0).toDouble();
+    mockResponse["yearlyExpenseTotal"] = expense;
+    query=db.getTotalIncomeByYear(currentYear);
+    query.next();
+    double income = query.value(0).toDouble();
+    mockResponse["yearlyIncomeTotal"] = income;
 
-    // 模拟 12 个月的数据
-    QJsonArray months;
-    for (int i = 0; i < 12; ++i) {
-        QJsonObject m;
-        // 根据支出/收入类型模拟不同数值
-        m["total"] = (currentTransactionType == "支出") ? (2000 + i * 100) : (5000 + i * 50);
-        months.append(m);
+    //  12 个月的数据
+    if(currentTransactionType == "支出"){
+        QJsonArray months;
+        for (int i = 0; i < 12; ++i) {
+            QJsonObject m;
+            query = db.getTotalExpenseByMonth(currentYear,i);
+            query.next();
+            m["total"] =query.value(0).toDouble();
+            months.append(m);
+        }
+        mockResponse["months"] = months;
     }
-    mockResponse["months"] = months;
+    else{
+        QJsonArray months;
+        for (int i = 0; i < 12; ++i) {
+            QJsonObject m;
+            query = db.getTotalIncomeByMonth(currentYear,i);
+            query.next();
+            m["total"] =query.value(0).toDouble();
+            months.append(m);
+        }
+        mockResponse["months"] = months;
+    }
 
-    // 模拟饼图数据
+    // 饼图数据
     QJsonArray pie;
     QJsonObject p1;
-    p1["category"] = (currentTransactionType == "支出") ? "餐饮美食" : "工资收入";
-    p1["totalAmount"] = 12000.0;
-    p1["ratio"] = 0.6;
-    pie.append(p1);
+    if (currentTransactionType == "支出") {
+        query = db.getExpenseCategoryStatsByYear(currentYear);
+        while(query.next()){
+            p1["category"] = query.value(0).toString();
+            p1["totalAmount"] = query.value(1).toDouble();
+            p1["ratio"] = query.value(1).toDouble()/expense;
+            p1["count"] = query.value(2).toInt();
+            pie.append(p1);
+        }
+    } else {
+        query = db.getIncomeCategoryStatsByYear(currentYear);
+        while(query.next()){
+            p1["category"] = query.value(0).toString();
+            p1["totalAmount"] = query.value(1).toDouble();
+            p1["ratio"] = query.value(1).toDouble()/income;
+            p1["count"] = query.value(2).toInt();
+            pie.append(p1);
+        }
+    }
     mockResponse["pie"] = pie;
 
     // 关键：必须调用更新函数
