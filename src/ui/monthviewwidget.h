@@ -117,6 +117,16 @@ signals:
      */
     void dayClicked(const QString &date);
 
+public slots:
+    /**
+     * @brief 刷新月度数据
+     *
+     * 功能：
+     * - 重新加载当前月的数据
+     * - 用于数据更新后刷新界面
+     */
+    void refreshData();
+
 private slots:
 
     /**
@@ -140,6 +150,8 @@ private slots:
      * - 重新请求该月的数据
      */
     void onMonthChanged(int year, int month);
+
+
 
 private:
     void setupUI();

@@ -69,21 +69,112 @@ private slots:
      * - 显示导入进度和结果
      */
     void onImportClicked();
+
+    /**
+     * @brief 响应帮助按钮点击
+     *
+     * 功能：
+     * - 打开帮助对话框（HelpDialog）
+     * - 显示使用说明
+     */
     void onHelpClicked();
+
+    /**
+     * @brief 响应周视图按钮点击
+     *
+     * 功能：
+     * - 切换到周度视图（WeekViewWidget）
+     * - 更新左侧栏按钮的选中状态
+     */
     void onWeekViewClicked();
+
+    /**
+     * @brief 响应月视图按钮点击
+     *
+     * 功能：
+     * - 切换到月度视图（MonthViewWidget）
+     * - 更新左侧栏按钮的选中状态
+     */
     void onMonthViewClicked();
+
+    /**
+     * @brief 响应年视图按钮点击
+     *
+     * 功能：
+     * - 切换到年度视图（YearViewWidget）
+     * - 更新左侧栏按钮的选中状态
+     */
     void onYearViewClicked();
+
+    /**
+     * @brief 从详情视图返回
+     *
+     * 功能：
+     * - 响应 DayDetailWidget 的 backToMainView() 信号
+     * - 切换回之前的视图（周/月/年）
+     */
     void onBackFromDetail();
+
+    /**
+     * @brief 显示单日详情视图
+     * @param date 日期字符串，格式 "YYYY-MM-DD"
+     *
+     * 功能：
+     * - 响应各视图组件的 dayClicked() 信号
+     * - 切换到单日详情视图（DayDetailWidget）
+     * - 调用 loadDayData() 加载该日期的数据
+     */
     void showDayDetailView(const QString &date);
+
+    /**
+     * @brief 响应数据变化
+     *
+     * 功能：
+     * - 当单日详情界面进行增删改操作后调用
+     * - 刷新所有视图的数据（周视图、月视图、年视图）
+     */
+    void onDataChanged();
 
 private:
     void setupUI();
     void setupTopBar();
     void setupSideBar();
     void setupContentArea();
+
+    /**
+     * @brief 显示空状态页面
+     *
+     * 功能：
+     * - 当没有数据时显示
+     * - 提示用户导入数据或添加记录
+     */
     void showEmptyState();
+
+    /**
+     * @brief 显示周度视图
+     *
+     * 功能：
+     * - 切换到周度视图
+     * - 连接相关信号槽
+     */
     void showWeekView();
+
+    /**
+     * @brief 显示月度视图
+     *
+     * 功能：
+     * - 切换到月度视图
+     * - 连接相关信号槽
+     */
     void showMonthView();
+
+    /**
+     * @brief 显示年度视图
+     *
+     * 功能：
+     * - 切换到年度视图
+     * - 连接相关信号槽
+     */
     void showYearView();
 
     Ui::MainWindow *ui;

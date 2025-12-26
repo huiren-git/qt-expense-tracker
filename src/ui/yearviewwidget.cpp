@@ -539,3 +539,8 @@ void YearViewWidget::updateYearData(const QJsonObject &json)
     // --- E. 更新评论 ---
     commentLabel->setText(json["comment"].toString());
 }
+
+void YearViewWidget::refreshData()
+{
+    loadYearData();
+}

@@ -97,12 +97,20 @@
  *     }
  */
 
+class WeekViewWidget;
+class MonthViewWidget;
+class YearViewWidget;
+
 class DayDetailWidget : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit DayDetailWidget(QWidget *parent = nullptr);
+    /**
+     * @brief 设置视图指针，用于数据更新后刷新
+     */
+    void setViewWidgets(WeekViewWidget *weekView, MonthViewWidget *monthView, YearViewWidget *yearView);
 
 public slots:
 
@@ -232,6 +240,15 @@ signals:
      */
     void backToMainView();
 
+    /**
+     * @brief 数据变化信号
+     *
+     * 用途：
+     * - 当单日详情界面进行增删改操作后发出
+     * - 通知其他视图刷新数据
+     */
+    void dataChanged();
+
 
 private:
     void setupUI();
@@ -258,6 +275,10 @@ private:
     QHBoxLayout *headerLayout;
 
     QString currentDate;
+
+    WeekViewWidget *weekViewWidget;
+    MonthViewWidget *monthViewWidget;
+    YearViewWidget *yearViewWidget;
 };
 
 #endif // DAYDETAILWIDGET_H

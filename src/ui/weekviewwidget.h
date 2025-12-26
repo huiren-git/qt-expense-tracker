@@ -129,6 +129,15 @@ public slots:
     */
     void onDayClicked(const QString &date);
 
+    /**
+     * @brief 刷新周度数据
+     *
+     * 功能：
+     * - 重新加载当前周的数据
+     * - 用于数据更新后刷新界面
+     */
+    void refreshData();
+
 signals:
     /**
      * @brief 日期点击信号

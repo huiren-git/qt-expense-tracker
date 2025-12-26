@@ -104,6 +104,15 @@ public slots:
      */
     void onYearChanged(int year);
 
+    /**
+     * @brief 刷新年度数据
+     *
+     * 功能：
+     * - 重新加载当前年的数据
+     * - 用于数据更新后刷新界面
+     */
+    void refreshData();
+
 signals:
 
     /**

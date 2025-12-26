@@ -606,3 +606,8 @@ void MonthViewWidget::loadMonthData(){
     updateMonthData(resp);
 
 }
+
+void MonthViewWidget::refreshData()
+{
+    loadMonthData();
+}

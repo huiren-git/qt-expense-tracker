@@ -795,5 +795,11 @@ void WeekViewWidget::onWeekChanged(int year, int week)
     currentYear = year;
     currentWeek = week;
     updateWeekDisplay();
-    loadWeekData();  // 使用测试数据
+    loadWeekData();
+}
+
+
+void WeekViewWidget::refreshData()
+{
+    loadWeekData();
 }

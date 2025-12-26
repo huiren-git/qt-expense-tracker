@@ -33,13 +33,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     db.insertDefaultTables();
 
-    // 检查数据库是否为空，决定显示空状态还是默认视图
-    // TODO: 连接数据库检查逻辑
-
     // 暂时假设有数据，默认显示周度视图
     // 无数据则使用showWeekView();
-   //   showEmptyState();
-   showWeekView();
+     showEmptyState();
+   //showWeekView();
 
     // 全局样式表
     qApp->setStyleSheet(
@@ -284,6 +281,7 @@ void MainWindow::setupContentArea()
 
     // 返回按钮同理
     connect(dayDetailWidget, &DayDetailWidget::backToMainView, this, &MainWindow::onBackFromDetail);
+    connect(dayDetailWidget, &DayDetailWidget::dataChanged, this, &MainWindow::onDataChanged);
 
     contentStack->addWidget(emptyStateWidget);
     contentStack->addWidget(weekViewWidget);
@@ -444,3 +442,10 @@ void MainWindow::onBackFromDetail()
     }
 }
 
+void MainWindow::onDataChanged()
+{
+    // 刷新所有视图的数据
+    weekViewWidget->refreshData();
+    monthViewWidget->refreshData();
+    yearViewWidget->refreshData();
+}
