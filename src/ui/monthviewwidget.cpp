@@ -559,23 +559,31 @@ void MonthViewWidget::loadMonthData(){
         query = db.getExpenseCategoryStatsByMonth(currentYear,currentMonth);
         while(query.next()){
             c1["category"] = query.value(0).toString();
-            c1["totalAmount"] = query.value(1).toDouble();
-            c1["ratio"] = query.value(1).toDouble()/expense;
-            c1["count"] = query.value(2).toInt();
+            c1["totalAmount"] = query.value(2).toDouble();
+            c1["ratio"] = query.value(2).toDouble()/expense;
+            c1["count"] = query.value(1).toInt();
             pie.append(c1);
         }
     } else {
         query = db.getIncomeCategoryStatsByMonth(currentYear,currentMonth);
         while(query.next()){
             c1["category"] = query.value(0).toString();
-            c1["totalAmount"] = query.value(1).toDouble();
-            c1["ratio"] = query.value(1).toDouble()/income;
-            c1["count"] = query.value(2).toInt();
+            c1["totalAmount"] = query.value(2).toDouble();
+            c1["ratio"] = query.value(2).toDouble()/income;
+            c1["count"] = query.value(1).toInt();
             pie.append(c1);
         }
     }
     resp["pie"] = pie;
-    QString comment=db.getTopCategoryByMonthWithComment(currentYear,currentMonth,currentTransactionType);
+
+    QString type;
+    if(currentTransactionType == "支出"){
+        type = "expense";
+    }
+    else{
+        type = "income";
+    }
+    QString comment=db.getTopCategoryByMonthWithComment(currentYear,currentMonth,type);
     resp["comment"] = comment;
 
     QJsonArray calArray;
@@ -585,7 +593,7 @@ void MonthViewWidget::loadMonthData(){
         QDate day(currentYear, currentMonth, d);
         QJsonObject obj;
         obj["date"] = day.toString("yyyy-MM-dd");
-        query=db.getTotalRecordsByDay(QDateTime(day,QTime(0,0,0)));
+        query=db.getTotalRecordsByDay(day.toString("yyyy-MM-dd"));
         query.next();
         if (currentTransactionType == "支出") {
             obj["dailyAmount"] = query.value(0).toDouble(); // 示例：替换为真实数据

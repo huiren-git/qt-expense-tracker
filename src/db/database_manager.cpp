@@ -272,7 +272,25 @@ void DatabaseManager::importAlipayCsv(const QString &csvPath)
             continue;
 
         // ---------- 解析时间 ----------
-        QDateTime dt = QDateTime::fromString(time, "yyyy/M/d H:mm");
+        time = time.trimmed();
+        time.replace(QRegularExpression("\\s+"), " ");
+
+        // 尝试 yyyy-MM-dd HH:mm:ss
+        QDateTime dt = QDateTime::fromString(time, "yyyy-MM-dd HH:mm:ss");
+
+        // 如果失败，尝试 yyyy/M/d H:mm:ss
+        if(!dt.isValid())
+            dt = QDateTime::fromString(time, "yyyy/M/d H:mm:ss");
+
+        // 如果再失败，尝试 yyyy/M/d H:mm
+        if(!dt.isValid())
+            dt = QDateTime::fromString(time, "yyyy/M/d H:mm");
+
+        if(!dt.isValid()){
+            qDebug() << "时间解析失败:" << time;
+            continue;   // 防止脏数据继续插入
+        }
+
 
         int year  = dt.date().year();
         int month = dt.date().month();
@@ -299,7 +317,7 @@ void DatabaseManager::importAlipayCsv(const QString &csvPath)
             "transaction_date, year, month, week, amount, transaction_type,"
             "category_id, transaction_method_id, counterparty, description, remark, source_id"
             ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
-        );
+            );
 
         ins.addBindValue(dt.toString("yyyy-MM-dd HH:mm:ss"));
         ins.addBindValue(year);
@@ -328,10 +346,10 @@ QSqlQuery DatabaseManager::getExpenseRecordsByYear(int year)
     QSqlQuery query;
     query.prepare(
         "SELECT * FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
+        "WHERE year = :year "
         "AND transaction_type = 'expense';"
     );
-    query.bindValue(":year", QString::number(year));
+    query.bindValue(":year", year);
     query.exec();
 
     return query;
@@ -343,10 +361,10 @@ QSqlQuery DatabaseManager::getIncomeRecordsByYear(int year)
     QSqlQuery query;
     query.prepare(
         "SELECT * FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
+        "WHERE year = :year "
         "AND transaction_type = 'income';"
     );
-    query.bindValue(":year", QString::number(year));
+    query.bindValue(":year", year);
     query.exec();
 
     return query;
@@ -358,12 +376,12 @@ QSqlQuery DatabaseManager::getExpenseRecordsByMonth(int year, int month)
     QSqlQuery query;
     query.prepare(
         "SELECT * FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%m', transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND transaction_type = 'expense';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":month", QString::number(month).rightJustified(2, '0'));  // 保证月份是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
     query.exec();
 
     return query;
@@ -375,12 +393,12 @@ QSqlQuery DatabaseManager::getIncomeRecordsByMonth(int year, int month)
     QSqlQuery query;
     query.prepare(
         "SELECT * FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%m', transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND transaction_type = 'income';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":month", QString::number(month).rightJustified(2, '0'));  // 保证月份是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
     query.exec();
 
     return query;
@@ -392,12 +410,12 @@ QSqlQuery DatabaseManager::getExpenseRecordsByWeek(int year, int week)
     QSqlQuery query;
     query.prepare(
         "SELECT * FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%W', transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND transaction_type = 'expense';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":week", QString::number(week).rightJustified(2, '0'));  // 保证周数是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":week", week);
     query.exec();
 
     return query;
@@ -409,27 +427,31 @@ QSqlQuery DatabaseManager::getIncomeRecordsByWeek(int year, int week)
     QSqlQuery query;
     query.prepare(
         "SELECT * FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%W', transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND transaction_type = 'income';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":week", QString::number(week).rightJustified(2, '0'));  // 保证周数是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":week", week);
     query.exec();
 
     return query;
 }
 
 // 筛选某天的所有支出和收入记录
-QSqlQuery DatabaseManager::getRecordsByDay(const QDateTime &date)
+QSqlQuery DatabaseManager::getRecordsByDay(QString date)
 {
+    //注意：因日期无法调用记录修改
+    //原：WHERE transaction_date = :date;
+    //字符串加%
     QSqlQuery query;
     query.prepare(
         "SELECT * FROM bill_record "
-        "WHERE strftime('%Y-%m-%d', transaction_date) = :date;"
+        "WHERE transaction_date LIKE :date;"
     );
-    query.bindValue(":date", date.toString("yyyy-MM-dd"));
+    query.bindValue(":date", date+"%");
     query.exec();
+
     return query;
 }
 
@@ -439,10 +461,10 @@ QSqlQuery DatabaseManager::getTotalExpenseByYear(int year)
     QSqlQuery query;
     query.prepare(
         "SELECT SUM(amount) AS total_expense FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
+        "WHERE year = :year "
         "AND transaction_type = 'expense';"
     );
-    query.bindValue(":year", QString::number(year));
+    query.bindValue(":year", year);
     query.exec();
 
     return query;
@@ -454,10 +476,10 @@ QSqlQuery DatabaseManager::getTotalIncomeByYear(int year)
     QSqlQuery query;
     query.prepare(
         "SELECT SUM(amount) AS total_income FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
+        "WHERE year = :year "
         "AND transaction_type = 'income';"
     );
-    query.bindValue(":year", QString::number(year));
+    query.bindValue(":year", year);
     query.exec();
 
     return query;
@@ -469,12 +491,12 @@ QSqlQuery DatabaseManager::getTotalExpenseByMonth(int year, int month)
     QSqlQuery query;
     query.prepare(
         "SELECT SUM(amount) AS total_expense FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%m', transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND transaction_type = 'expense';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":month", QString::number(month).rightJustified(2, '0'));  // 保证月份是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
     query.exec();
 
     return query;
@@ -486,12 +508,12 @@ QSqlQuery DatabaseManager::getTotalIncomeByMonth(int year, int month)
     QSqlQuery query;
     query.prepare(
         "SELECT SUM(amount) AS total_income FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%m', transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND transaction_type = 'income';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":month", QString::number(month).rightJustified(2, '0'));  // 保证月份是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
     query.exec();
 
     return query;
@@ -503,12 +525,12 @@ QSqlQuery DatabaseManager::getTotalExpenseByWeek(int year, int week)
     QSqlQuery query;
     query.prepare(
         "SELECT SUM(amount) AS total_expense FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%W', transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND transaction_type = 'expense';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":week", QString::number(week).rightJustified(2, '0'));  // 保证周数是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":week", week);
     query.exec();
 
     return query;
@@ -520,30 +542,34 @@ QSqlQuery DatabaseManager::getTotalIncomeByWeek(int year, int week)
     QSqlQuery query;
     query.prepare(
         "SELECT SUM(amount) AS total_income FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%W', transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND transaction_type = 'income';"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":week", QString::number(week).rightJustified(2, '0'));  // 保证周数是两位数
+    query.bindValue(":year", year);
+    query.bindValue(":week", week);
     query.exec();
 
     return query;
 }
 
 // 筛选某天的总支出和总收入
-QSqlQuery DatabaseManager::getTotalRecordsByDay(const QDateTime &date)
+QSqlQuery DatabaseManager::getTotalRecordsByDay(QString date)
 {
     QSqlQuery query;
+    // 此处更改
+    // 原：WHERE transaction_date = :date;
+    //字符串加%
     query.prepare(
         "SELECT "
         "SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) AS total_expense, "
         "SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END) AS total_income "
         "FROM bill_record "
-        "WHERE strftime('%Y-%m-%d', transaction_date) = :date;"
+        "WHERE transaction_date LIKE :date;"
     );
-    query.bindValue(":date", date.toString("yyyy-MM-dd"));
+    query.bindValue(":date", date+"%");
     query.exec();
+
     return query;
 }
 
@@ -555,11 +581,11 @@ QSqlQuery DatabaseManager::getExpenseCategoryStatsByYear(int year)
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
+        "WHERE year = :year "
         "AND b.transaction_type = 'expense' "
         "GROUP BY c.name;"
     );
-    query.bindValue(":year", QString::number(year));
+    query.bindValue(":year", year);
     query.exec();
 
     return query;
@@ -573,11 +599,11 @@ QSqlQuery DatabaseManager::getIncomeCategoryStatsByYear(int year)
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
+        "WHERE year = :year "
         "AND b.transaction_type = 'income' "
         "GROUP BY c.name;"
     );
-    query.bindValue(":year", QString::number(year));
+    query.bindValue(":year", year);
     query.exec();
 
     return query;
@@ -591,13 +617,13 @@ QSqlQuery DatabaseManager::getExpenseCategoryStatsByMonth(int year, int month)
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
-        "AND strftime('%m', b.transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND b.transaction_type = 'expense' "
         "GROUP BY c.name;"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":month", QString::number(month).rightJustified(2, '0'));
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
     query.exec();
 
     return query;
@@ -611,13 +637,13 @@ QSqlQuery DatabaseManager::getIncomeCategoryStatsByMonth(int year, int month)
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
-        "AND strftime('%m', b.transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND b.transaction_type = 'income' "
         "GROUP BY c.name;"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":month", QString::number(month).rightJustified(2, '0'));
+    query.bindValue(":year", year);
+    query.bindValue(":month", month);
     query.exec();
 
     return query;
@@ -631,8 +657,8 @@ QSqlQuery DatabaseManager::getExpenseCategoryStatsByWeek(int year, int week)
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
-        "AND strftime('%W', b.transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND b.transaction_type = 'expense' "
         "GROUP BY c.name;"
     );
@@ -651,83 +677,94 @@ QSqlQuery DatabaseManager::getIncomeCategoryStatsByWeek(int year, int week)
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
-        "AND strftime('%W', b.transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND b.transaction_type = 'income' "
         "GROUP BY c.name;"
     );
-    query.bindValue(":year", QString::number(year));
-    query.bindValue(":week", QString::number(week).rightJustified(2, '0'));
+    query.bindValue(":year", year);
+    query.bindValue(":week", week);
     query.exec();
 
     return query;
 }
 
-// 查询某年的总支出金额
-QString DatabaseManager::getTopCategoryExpenseByYearWithComment(int year)
+// 查询某年的总支出金额评价
+QString DatabaseManager::getTopCategoryByYearWithComment(int year, const QString &transactionType)
 {
-    QSqlQuery totalQuery;
-    totalQuery.prepare(
-        "SELECT SUM(amount) AS total_expense FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND transaction_type = 'expense';"
-    );
-    totalQuery.bindValue(":year", QString::number(year));
-    totalQuery.exec();
-
-    double totalExpense = 0;
-    if (totalQuery.next()) {
-        totalExpense = totalQuery.value("total_expense").toDouble();
-    }
-
-    // 查询每个分类的支出统计
-    QSqlQuery query;
-    query.prepare(
-        "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
-        "FROM bill_record b "
-        "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
-        "AND b.transaction_type = 'expense' "
-        "GROUP BY c.name;"
-    );
-    query.bindValue(":year", QString::number(year));
-    query.exec();
-
-    // 查找占比最大的分类
-    double maxPercentage = 0;
-    QString topCategoryName;
-    double topCategoryTotal = 0;
-    while (query.next()) {
-        QString categoryName = query.value("name").toString();
-        double categoryTotal = query.value("total_amount").toDouble();
-
-        // 计算占比
-        double percentage = (totalExpense > 0) ? (categoryTotal / totalExpense) * 100 : 0;
-
-        // 更新占比最大的分类
-        if (percentage > maxPercentage) {
-            maxPercentage = percentage;
-            topCategoryName = categoryName;
-            topCategoryTotal = categoryTotal;
-        }
-    }
-
-    // 获取对应的评论
-    QString comment;
-    if (!topCategoryName.isEmpty()) {
-        QSqlQuery commentQuery;
-        commentQuery.prepare(
-            "SELECT comment FROM comment_rule "
-            "WHERE category_id = (SELECT id FROM category WHERE name = :category_name) "
-            "AND transaction_type = 'expense';"
+    // 查询总金额（支出或收入）
+        QSqlQuery totalQuery;
+        totalQuery.prepare(
+            "SELECT SUM(amount) AS total_amount FROM bill_record "
+            "WHERE year = :year "
+            "AND transaction_type = :transaction_type;"
         );
-        commentQuery.bindValue(":category_name", topCategoryName);
-        commentQuery.exec();
+        totalQuery.bindValue(":year", QString::number(year));
+        totalQuery.bindValue(":transaction_type", transactionType);
+        totalQuery.exec();
 
-        if (commentQuery.next()) {
-            comment = commentQuery.value("comment").toString();
+        double totalAmount = 0;
+        if (totalQuery.next()) {
+            totalAmount = totalQuery.value("total_amount").toDouble();
         }
-    }
+
+        // 查询每个分类的统计（支出或收入）
+        QSqlQuery query;
+        query.prepare(
+            "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
+            "FROM bill_record b "
+            "JOIN category c ON b.category_id = c.id "
+            "WHERE year = :year "
+            "AND b.transaction_type = :transaction_type "
+            "GROUP BY c.name;"
+        );
+        query.bindValue(":year", QString::number(year));
+        query.bindValue(":transaction_type", transactionType);
+        query.exec();
+
+        // 查找占比最大的分类
+        double maxPercentage = 0;
+        QString topCategoryName;
+        double topCategoryTotal = 0;
+        while (query.next()) {
+            QString categoryName = query.value("name").toString();
+            double categoryTotal = query.value("total_amount").toDouble();
+
+            // 计算占比
+            double percentage = (totalAmount > 0) ? (categoryTotal / totalAmount) * 100 : 0;
+
+            // 更新占比最大的分类
+            if (percentage > maxPercentage) {
+                maxPercentage = percentage;
+                topCategoryName = categoryName;
+                topCategoryTotal = categoryTotal;
+            }
+        }
+
+        // 获取对应的评论
+        QString comment;
+        if (!topCategoryName.isEmpty()) {
+            QSqlQuery commentQuery;
+
+            commentQuery.prepare(
+                "SELECT comment FROM comment "
+                "WHERE category_id = (SELECT id FROM category WHERE name = :category_name "
+                "AND type = :transaction_type);"
+            );
+            commentQuery.bindValue(":category_name", topCategoryName);
+            //commentQuery.bindValue(":transaction_type", transactionType);
+            //暂且这样获得评论
+            commentQuery.bindValue(":transaction_type", "expense");
+            if(!commentQuery.exec()){
+
+                qDebug()<< "获取年评论错误：" << commentQuery.lastError();
+            }
+
+            if (commentQuery.next()) {
+                comment = commentQuery.value("comment").toString();
+            }
+        }
+
 
     qDebug() << "top分类: " << topCategoryName;
     qDebug() << "总成交量: " << topCategoryTotal;
@@ -745,8 +782,8 @@ QString DatabaseManager::getTopCategoryByMonthWithComment(int year, int month, c
     QSqlQuery totalQuery;
     totalQuery.prepare(
         "SELECT SUM(amount) AS total_amount FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%m', transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND transaction_type = :transaction_type;"
     );
     totalQuery.bindValue(":year", QString::number(year));
@@ -765,8 +802,8 @@ QString DatabaseManager::getTopCategoryByMonthWithComment(int year, int month, c
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
-        "AND strftime('%m', b.transaction_date) = :month "
+        "WHERE year = :year "
+        "AND month = :month "
         "AND b.transaction_type = :transaction_type "
         "GROUP BY c.name;"
     );
@@ -799,13 +836,18 @@ QString DatabaseManager::getTopCategoryByMonthWithComment(int year, int month, c
     if (!topCategoryName.isEmpty()) {
         QSqlQuery commentQuery;
         commentQuery.prepare(
-            "SELECT comment FROM comment_rule "
-            "WHERE category_id = (SELECT id FROM category WHERE name = :category_name) "
-            "AND transaction_type = :transaction_type;"
+            "SELECT comment FROM comment "
+            "WHERE category_id = (SELECT id FROM category WHERE name = :category_name "
+            "AND type = :transaction_type);"
         );
         commentQuery.bindValue(":category_name", topCategoryName);
-        commentQuery.bindValue(":transaction_type", transactionType);
-        commentQuery.exec();
+        //commentQuery.bindValue(":transaction_type", transactionType);
+        //暂且这样获得评论
+        commentQuery.bindValue(":transaction_type", "expense");
+        if(!commentQuery.exec()){
+
+            qDebug()<< "获取月评论错误：" << commentQuery.lastError();
+        }
 
         if (commentQuery.next()) {
             comment = commentQuery.value("comment").toString();
@@ -827,8 +869,8 @@ QString DatabaseManager::getTopCategoryByWeekWithComment(int year, int week, con
     QSqlQuery totalQuery;
     totalQuery.prepare(
         "SELECT SUM(amount) AS total_amount FROM bill_record "
-        "WHERE strftime('%Y', transaction_date) = :year "
-        "AND strftime('%W', transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND transaction_type = :transaction_type;"
     );
     totalQuery.bindValue(":year", QString::number(year));
@@ -847,8 +889,8 @@ QString DatabaseManager::getTopCategoryByWeekWithComment(int year, int week, con
         "SELECT c.name, COUNT(b.id) AS bill_count, SUM(b.amount) AS total_amount "
         "FROM bill_record b "
         "JOIN category c ON b.category_id = c.id "
-        "WHERE strftime('%Y', b.transaction_date) = :year "
-        "AND strftime('%W', b.transaction_date) = :week "
+        "WHERE year = :year "
+        "AND week = :week "
         "AND b.transaction_type = :transaction_type "
         "GROUP BY c.name;"
     );
@@ -880,14 +922,20 @@ QString DatabaseManager::getTopCategoryByWeekWithComment(int year, int week, con
     QString comment;
     if (!topCategoryName.isEmpty()) {
         QSqlQuery commentQuery;
+
         commentQuery.prepare(
-            "SELECT comment FROM comment_rule "
-            "WHERE category_id = (SELECT id FROM category WHERE name = :category_name) "
-            "AND transaction_type = :transaction_type;"
-        );
+            "SELECT comment FROM comment "
+            "WHERE category_id = (SELECT id FROM category WHERE name = :category_name "
+            "AND type = :transaction_type);"
+            );
         commentQuery.bindValue(":category_name", topCategoryName);
-        commentQuery.bindValue(":transaction_type", transactionType);
-        commentQuery.exec();
+        //commentQuery.bindValue(":transaction_type", transactionType);
+        //暂且这样获得评论
+        commentQuery.bindValue(":transaction_type", "expense");
+        if(!commentQuery.exec()){
+
+            qDebug()<< "获取周评论错误：" << commentQuery.lastError();
+        }
 
         if (commentQuery.next()) {
             comment = commentQuery.value("comment").toString();
@@ -982,7 +1030,6 @@ void DatabaseManager::addRecord(double amount, QString transaction_type, QString
             ":counterparty, :description, :source_id, :remark)"
         );
 
-    //现金不计订单号
     if (methodId == 1) {
         source_id = "";
     }
@@ -1053,6 +1100,9 @@ int DatabaseManager::getExpenseBillIdByDate(QString transactionDate) {
         qDebug() << "无法根据交易日期找到消费订单id: " << query.lastError();
         return billId;
     }
+
+    query.next();
+    billId = query.value(0).toInt();
     return billId;
 }
 
@@ -1069,5 +1119,7 @@ int DatabaseManager::getIncomeBillIdByDate(QString transactionDate) {
         return billId;
     }
 
+    query.next();
+    billId = query.value(0).toInt();
     return billId;
 }

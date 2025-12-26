@@ -263,7 +263,7 @@ QJsonObject RecordEditDialog::getRecordData() const
     record["week"] = date.weekNumber();
 
     record["amount"] = amountEdit->text().toDouble();
-    record["transactionType"] = expenseRadio->isChecked() ? "income" : "expense";
+    record["transactionType"] = expenseRadio->isChecked() ? "expense" : "income";
     record["category"] = categoryComboBox->currentIndex()+1;
 
     if (alipayRadio->isChecked()) {

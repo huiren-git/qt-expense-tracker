@@ -26,7 +26,7 @@ public:
     QSqlQuery getIncomeRecordsByMonth(int year, int month);  // 某月收入
     QSqlQuery getExpenseRecordsByWeek(int year, int week);  // 某周支出
     QSqlQuery getIncomeRecordsByWeek(int year, int week);  // 某周收入
-    QSqlQuery getRecordsByDay(const QDateTime &date);  // 某天收支
+    QSqlQuery getRecordsByDay(QString date);  // 某天收支
 
     /*计算总收入或总支出*/
     QSqlQuery getTotalExpenseByYear(int year);  // 某年总支出
@@ -35,7 +35,7 @@ public:
     QSqlQuery getTotalIncomeByMonth(int year, int month);  // 某月总收入
     QSqlQuery getTotalExpenseByWeek(int year, int week);  // 某周总支出
     QSqlQuery getTotalIncomeByWeek(int year, int week);  // 某周总收入
-    QSqlQuery getTotalRecordsByDay(const QDateTime &date); // 某天总支出和总收入
+    QSqlQuery getTotalRecordsByDay(QString date); // 某天总支出和总收入
 
     /*计算分类排行和占比 -> 返回有哪些类别及其对应的数量、总金额、总金额占比*/
     QSqlQuery getExpenseCategoryStatsByYear(int year);
@@ -46,7 +46,7 @@ public:
     QSqlQuery getIncomeCategoryStatsByWeek(int year, int week);
 
     /*查询总金额占比最大的分类对应的评价*/
-    QString getTopCategoryExpenseByYearWithComment(int year);
+    QString getTopCategoryByYearWithComment(int year, const QString &transactionType);
     QString getTopCategoryByMonthWithComment(int year, int month, const QString &transactionType);
     QString getTopCategoryByWeekWithComment(int year, int week, const QString &transactionType);
 

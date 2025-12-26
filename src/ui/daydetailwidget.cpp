@@ -139,17 +139,17 @@ void DayDetailWidget::loadDayData(const QString &date)
     DatabaseManager &db = DatabaseManager::instance();
     if(!db.isReady()){
         if(!db.openDatabase()){
-
+            qDebug() << "载入单日单日记录时数据库开启失败";
             return;
         }
     }
     QSqlQuery query;
 
-    // 创建测试数据
+    // 载入数据
+
         QJsonObject testData;
         testData["operation"] = true;
-        QDateTime datetime(QDate::fromString(date),QTime(0,0,0));
-        query = db.getTotalRecordsByDay(datetime);
+        query = db.getTotalRecordsByDay(date);
         query.next();
         double income = query.value(1).toDouble();
         double expense = query.value(0).toDouble();
@@ -158,7 +158,7 @@ void DayDetailWidget::loadDayData(const QString &date)
 
         QJsonArray records;
         QJsonObject record1;
-        query = db.getRecordsByDay(datetime);
+        query = db.getRecordsByDay(date);
         while(query.next()){
             record1["id"] = query.value(0).toInt();
             record1["transactionDate"] = query.value(1).toString();
@@ -327,7 +327,14 @@ void DayDetailWidget::onAddClicked()
     if (dialog->exec() == QDialog::Accepted) {
         QJsonObject record = dialog->getRecordData();
         // TODO: 发送新增请求
+        qDebug() << "开始插入";
         DatabaseManager &db=DatabaseManager::instance();
+        if(!db.isReady()){
+            if(!db.openDatabase()){
+                qDebug() << "插入数据时数据库开启失败";
+                return;
+            }
+        }
         db.addRecord(record["amount"].toDouble(), record["transactionType"].toString(), record["transactionDate"].toString(),
                      record["category"].toInt(), record["transactionMethod"].toInt(), record["counterparty"].toString(), record["productName"].toString(),
                      record["sourceId"].toString(),record["remark"].toString());
@@ -340,7 +347,6 @@ void DayDetailWidget::onEditClicked(int row)
 {
     // 从表格获取记录数据
     QJsonObject record;
-    int id=recordsTable->item(row, 0)->text().toInt();
     record["transactionDate"] = recordsTable->item(row, 1)->text();
     record["amount"] = recordsTable->item(row, 2)->text();
     record["transactionType"] = recordsTable->item(row, 3)->text();
@@ -360,6 +366,19 @@ void DayDetailWidget::onEditClicked(int row)
             request["transactionDate"] = record["transactionDate"]; // 原始主键
             request["revised"] = revisedData; // 修改后的内容
             DatabaseManager &db=DatabaseManager::instance();
+            if(!db.isReady()){
+                if(!db.openDatabase()){
+                    qDebug() << "更新数据时数据库开启失败";
+                    return;
+                }
+            }
+            int id=-1;
+            if(recordsTable->item(row, 3)->text()=="支出"){
+                id = db.getExpenseBillIdByDate(recordsTable->item(row, 1)->text());
+            }
+            else{
+                id = db.getIncomeBillIdByDate(recordsTable->item(row, 1)->text());
+            }
             db.updateRecord(id, revisedData["amount"].toDouble(), revisedData["transactionType"].toString(), revisedData["transactionDate"].toString(),
                      revisedData["category"].toInt(), revisedData["transactionMethod"].toInt(), revisedData["counterparty"].toString(),
                             revisedData["productName"].toString(), revisedData["sourceId"].toString(),revisedData["remark"].toString());
@@ -429,12 +448,25 @@ void DayDetailWidget::onDeleteClicked(int row)
 
     // 4. 执行并处理逻辑
     if (msgBox.exec() == QMessageBox::Ok) {
-        int id = recordsTable->item(row, 0)->text().toInt();
         QString transDate = recordsTable->item(row, 1)->text();
         QJsonObject request;
         request["transactionDate"] = transDate;
         DatabaseManager &db=DatabaseManager::instance();
+        if(!db.isReady()){
+            if(!db.openDatabase()){
+                qDebug() << "删除数据时数据库开启失败";
+                return;
+            }
+        }
+        int id=-1;
+        if(recordsTable->item(row, 3)->text()=="支出"){
+            id = db.getExpenseBillIdByDate(recordsTable->item(row, 1)->text());
+        }
+        else{
+            id = db.getIncomeBillIdByDate(recordsTable->item(row, 1)->text());
+        }
         db.deleteRecord(id);
+
         emit deleteRecordRequested(request);
     }
 }

@@ -395,8 +395,17 @@ void MainWindow::onImportClicked()
         // request["source"] = "alipay";
         // request["filePath"] = filePath;
         // emit importRequested(request);
+        DatabaseManager &db = DatabaseManager::instance();
+        if(!db.isReady()){
+            if(!db.openDatabase()){
+                QMessageBox::information(this, "导入", "数据库开启失败，请重试");
 
+                return;
+            }
+        }
         QMessageBox::information(this, "导入", "文件路径: " + filePath);
+
+        db.importAlipayCsv(filePath);
 
         // 导入后切换到周度视图
         showWeekView();

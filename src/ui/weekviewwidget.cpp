@@ -25,7 +25,7 @@ WeekViewWidget::WeekViewWidget(QWidget *parent)
     dengXianFont.setPixelSize(12); // 设置字号
 
     setupUI();
-    // 加载测试数据
+    // 加载数据
     loadWeekData();
 }
 
@@ -509,7 +509,9 @@ void WeekViewWidget::loadWeekData()
     query.next();
     double income=query.value(0).toDouble();
     currentWeekObj["weeklyIncomeTotal"] = income;
+
     query = db.getTotalExpenseByWeek(currentYear,currentWeek);
+    query.next();
     double expense=query.value(0).toDouble();
     qDebug() << expense;
     currentWeekObj["weeklyExpenseTotal"] = expense;
@@ -517,23 +519,16 @@ void WeekViewWidget::loadWeekData()
     //单日收支
     QJsonArray currentBars;
     QJsonArray previousBars;
-    QDate weekStart;
-    if(currentWeek > 1){
-        weekStart = getMondayOfISOWeek(currentYear, currentWeek-1);
-    }
-    else{
-        weekStart = getMondayOfISOWeek(currentYear-1, 52);
-    }
-    weekStart=weekStart.addDays(6);
+    QDate weekStart=getMondayOfISOWeek(currentYear, currentWeek);
     for (int i = 0; i < 7; i++) {
-        query=db.getTotalRecordsByDay(QDateTime(weekStart.addDays(i+1),QTime(0,0,0)));
+        query=db.getTotalRecordsByDay(weekStart.addDays(i).toString("yyyy-MM-dd"));
         query.next();
         QJsonObject cDay;
         cDay["dailyExpense"] = query.value(0).toDouble();
         cDay["dailyIncome"] = query.value(1).toDouble();
         currentBars.append(cDay);
 
-        query=db.getTotalRecordsByDay(QDateTime(weekStart.addDays(i),QTime(0,0,0)));
+        query=db.getTotalRecordsByDay(weekStart.addDays(i-7).toString("yyyy-MM-dd"));
         query.next();
         QJsonObject pDay;
         pDay["dailyExpense"] = query.value(0).toDouble();
@@ -552,9 +547,9 @@ void WeekViewWidget::loadWeekData()
         query = db.getExpenseCategoryStatsByWeek(currentYear,currentWeek);
         while(query.next()){
             cat["category"] = query.value(0).toString();
-            cat["totalAmount"] = query.value(1).toDouble();
-            cat["ratio"] = query.value(1).toDouble()/expense;
-            cat["count"] = query.value(2).toInt();
+            cat["totalAmount"] = query.value(2).toDouble();
+            cat["ratio"] = query.value(2).toDouble()/expense;
+            cat["count"] = query.value(1).toInt();
             pieArray.append(cat);
         }
 
@@ -562,15 +557,21 @@ void WeekViewWidget::loadWeekData()
         query = db.getIncomeCategoryStatsByWeek(currentYear,currentWeek);
         while(query.next()){
             cat["category"] = query.value(0).toString();
-            cat["totalAmount"] = query.value(1).toDouble();
-            cat["ratio"] = query.value(1).toDouble()/income;
-            cat["count"] = query.value(2).toInt();
+            cat["totalAmount"] = query.value(2).toDouble();
+            cat["ratio"] = query.value(2).toDouble()/income;
+            cat["count"] = query.value(1).toInt();
             pieArray.append(cat);
         }
     }
-    pieArray.append(cat);
     currentWeekObj["pie"] = pieArray;
-    QString comment = db.getTopCategoryByWeekWithComment(currentYear,currentWeek,currentTransactionType);
+    QString type;
+    if(currentTransactionType == "支出"){
+        type = "expense";
+    }
+    else{
+        type = "income";
+    }
+    QString comment = db.getTopCategoryByWeekWithComment(currentYear,currentWeek,type);
     //currentWeekObj["comment"] = (currentTransactionType == "支出") ? "节约是美德" : "加油赚钱！";
     currentWeekObj["comment"] = comment;
     response["currentWeek"] = currentWeekObj;

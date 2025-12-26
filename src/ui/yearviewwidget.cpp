@@ -360,9 +360,15 @@ void YearViewWidget::loadYearData()
     // 后端返回的 JSON
     QJsonObject mockResponse;
     mockResponse["year"] = currentYear;
-    QString comment = db.getTopCategoryExpenseByYearWithComment(currentYear);
+    QString type;
+    if(currentTransactionType == "支出"){
+        type = "expense";
+    }
+    else{
+        type = "income";
+    }
+    QString comment = db.getTopCategoryByYearWithComment(currentYear,type);
     mockResponse["comment"] = comment;
-    //mockResponse["comment"] = (currentTransactionType == "支出") ? "年度支出控制在预期内。" : "年度收入稳步增长。";
 
     // 卡片总额
     query=db.getTotalExpenseByYear(currentYear);
@@ -379,7 +385,7 @@ void YearViewWidget::loadYearData()
         QJsonArray months;
         for (int i = 0; i < 12; ++i) {
             QJsonObject m;
-            query = db.getTotalExpenseByMonth(currentYear,i);
+            query = db.getTotalExpenseByMonth(currentYear,i+1);
             query.next();
             m["total"] =query.value(0).toDouble();
             months.append(m);
@@ -390,7 +396,7 @@ void YearViewWidget::loadYearData()
         QJsonArray months;
         for (int i = 0; i < 12; ++i) {
             QJsonObject m;
-            query = db.getTotalIncomeByMonth(currentYear,i);
+            query = db.getTotalIncomeByMonth(currentYear,i+1);
             query.next();
             m["total"] =query.value(0).toDouble();
             months.append(m);
@@ -405,18 +411,18 @@ void YearViewWidget::loadYearData()
         query = db.getExpenseCategoryStatsByYear(currentYear);
         while(query.next()){
             p1["category"] = query.value(0).toString();
-            p1["totalAmount"] = query.value(1).toDouble();
-            p1["ratio"] = query.value(1).toDouble()/expense;
-            p1["count"] = query.value(2).toInt();
+            p1["totalAmount"] = query.value(2).toDouble();
+            p1["ratio"] = query.value(2).toDouble()/expense;
+            p1["count"] = query.value(1).toInt();
             pie.append(p1);
         }
     } else {
         query = db.getIncomeCategoryStatsByYear(currentYear);
         while(query.next()){
             p1["category"] = query.value(0).toString();
-            p1["totalAmount"] = query.value(1).toDouble();
-            p1["ratio"] = query.value(1).toDouble()/income;
-            p1["count"] = query.value(2).toInt();
+            p1["totalAmount"] = query.value(2).toDouble();
+            p1["ratio"] = query.value(2).toDouble()/income;
+            p1["count"] = query.value(1).toInt();
             pie.append(p1);
         }
     }
