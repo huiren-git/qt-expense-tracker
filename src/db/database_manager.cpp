@@ -583,7 +583,7 @@ QSqlQuery DatabaseManager::getExpenseCategoryStatsByYear(int year)
         "JOIN category c ON b.category_id = c.id "
         "WHERE year = :year "
         "AND b.transaction_type = 'expense' "
-        "GROUP BY c.name"
+        "GROUP BY c.name "
         "ORDER BY total_amount DESC;"
     );
     query.bindValue(":year", year);
@@ -602,7 +602,7 @@ QSqlQuery DatabaseManager::getIncomeCategoryStatsByYear(int year)
         "JOIN category c ON b.category_id = c.id "
         "WHERE year = :year "
         "AND b.transaction_type = 'income' "
-        "GROUP BY c.name"
+        "GROUP BY c.name "
         "ORDER BY total_amount DESC;"
     );
     query.bindValue(":year", year);
@@ -622,7 +622,7 @@ QSqlQuery DatabaseManager::getExpenseCategoryStatsByMonth(int year, int month)
         "WHERE year = :year "
         "AND month = :month "
         "AND b.transaction_type = 'expense' "
-        "GROUP BY c.name"
+        "GROUP BY c.name "
         "ORDER BY total_amount DESC;"
     );
     query.bindValue(":year", year);
@@ -643,7 +643,7 @@ QSqlQuery DatabaseManager::getIncomeCategoryStatsByMonth(int year, int month)
         "WHERE year = :year "
         "AND month = :month "
         "AND b.transaction_type = 'income' "
-        "GROUP BY c.name"
+        "GROUP BY c.name "
         "ORDER BY total_amount DESC;"
     );
     query.bindValue(":year", year);
@@ -664,7 +664,7 @@ QSqlQuery DatabaseManager::getExpenseCategoryStatsByWeek(int year, int week)
         "WHERE year = :year "
         "AND week = :week "
         "AND b.transaction_type = 'expense' "
-        "GROUP BY c.name"
+        "GROUP BY c.name "
         "ORDER BY total_amount DESC;"
     );
     query.bindValue(":year", QString::number(year));
@@ -685,7 +685,7 @@ QSqlQuery DatabaseManager::getIncomeCategoryStatsByWeek(int year, int week)
         "WHERE year = :year "
         "AND week = :week "
         "AND b.transaction_type = 'income' "
-        "GROUP BY c.name"
+        "GROUP BY c.name "
         "ORDER BY total_amount DESC;"
     );
     query.bindValue(":year", year);
