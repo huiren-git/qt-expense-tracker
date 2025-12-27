@@ -10,6 +10,9 @@
 #include <QSqlQuery>
 #include <QDebug>
 #include "../db/database_manager.h"
+#include "weekviewwidget.h"
+#include "monthviewwidget.h"
+#include "yearviewwidget.h"
 
 DayDetailWidget::DayDetailWidget(QWidget *parent)
     : QWidget(parent)
@@ -340,6 +343,8 @@ void DayDetailWidget::onAddClicked()
                      record["sourceId"].toString(),record["remark"].toString());
 
         emit addRecordRequested(record);
+        emit dataChanged();  // 发出数据变化信号
+        loadDayData(currentDate);
     }
 }
 
@@ -384,6 +389,8 @@ void DayDetailWidget::onEditClicked(int row)
                             revisedData["productName"].toString(), revisedData["sourceId"].toString(),revisedData["remark"].toString());
 
             emit editRecordRequested(request);
+            emit dataChanged();  // 发出数据变化信号
+            loadDayData(currentDate);
         }
 }
 
@@ -468,6 +475,8 @@ void DayDetailWidget::onDeleteClicked(int row)
         db.deleteRecord(id);
 
         emit deleteRecordRequested(request);
+        emit dataChanged();  // 发出数据变化信号
+        loadDayData(currentDate);
     }
 }
 

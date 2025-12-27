@@ -119,6 +119,8 @@ public slots:
      */
     void onWeekChanged(int year, int week);
 
+    void refreshData();
+
     /**
     * @brief 响应日期点击事件
     * @param date 日期字符串，格式 "YYYY-MM-DD"（例如 "2024-01-15"）

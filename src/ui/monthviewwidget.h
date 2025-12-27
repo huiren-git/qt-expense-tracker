@@ -104,6 +104,10 @@ public:
      */
     int getCalendarMonthShown() const { return calendarWidget ? calendarWidget->monthShown() : currentMonth; };
 
+
+public slots:
+     void refreshData();
+
 signals:
 
     /**

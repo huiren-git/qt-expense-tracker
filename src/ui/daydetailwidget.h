@@ -97,12 +97,18 @@
  *     }
  */
 
+
+class WeekViewWidget;
+class MonthViewWidget;
+class YearViewWidget;
+
 class DayDetailWidget : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit DayDetailWidget(QWidget *parent = nullptr);
+    void setViewWidgets(WeekViewWidget *weekView, MonthViewWidget *monthView, YearViewWidget *yearView);
 
 public slots:
 
@@ -232,11 +238,17 @@ signals:
      */
     void backToMainView();
 
+    void dataChanged();
+
 
 private:
     void setupUI();
     void setupHeader();
     void setupTable();
+
+    WeekViewWidget *weekViewWidget;
+    MonthViewWidget *monthViewWidget;
+    YearViewWidget *yearViewWidget;
 
     /**
      * @brief 更新单日数据到UI组件

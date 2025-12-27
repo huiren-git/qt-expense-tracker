@@ -104,6 +104,8 @@ public slots:
      */
     void onYearChanged(int year);
 
+     void refreshData();
+
 signals:
 
     /**

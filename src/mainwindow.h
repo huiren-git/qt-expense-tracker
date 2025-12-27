@@ -75,6 +75,7 @@ private slots:
     void onYearViewClicked();
     void onBackFromDetail();
     void showDayDetailView(const QString &date);
+     void onDataChanged();
 
 private:
     void setupUI();

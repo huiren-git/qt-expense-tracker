@@ -38,8 +38,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 暂时假设有数据，默认显示周度视图
     // 无数据则使用showWeekView();
-   //   showEmptyState();
-   showWeekView();
+   showEmptyState();
+   //showWeekView();
 
     // 全局样式表
     qApp->setStyleSheet(
@@ -280,6 +280,7 @@ void MainWindow::setupContentArea()
     dayDetailWidget = new DayDetailWidget();
 
     connect(weekViewWidget, &WeekViewWidget::dayClicked, this, &MainWindow::showDayDetailView);
+    connect(dayDetailWidget, &DayDetailWidget::dataChanged, this, &MainWindow::onDataChanged);
     connect(monthViewWidget, &MonthViewWidget::dayClicked, this, &MainWindow::showDayDetailView);
 
     // 返回按钮同理
@@ -442,5 +443,14 @@ void MainWindow::onBackFromDetail()
     } else if (currentViewType == "year") {
         showYearView();
     }
+}
+
+
+void MainWindow::onDataChanged()
+{
+    // 刷新所有视图的数据
+    weekViewWidget->refreshData();
+    monthViewWidget->refreshData();
+    yearViewWidget->refreshData();
 }
 
